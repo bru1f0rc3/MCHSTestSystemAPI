@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>aspnet-MCHSProject-856ecd0a-6d67-4f81-b8ed-0709c02229b1</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
+    <PackageReference Include="itext7" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" NoWarn="NU1605" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.1" NoWarn="NU1605" />
+    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+    <Folder Include="Services\" />
+    <Folder Include="Models\" />
+    <Folder Include="DTO\" />
+    <Folder Include="ConnectionDB\" />
+  </ItemGroup>
+
+</Project>
