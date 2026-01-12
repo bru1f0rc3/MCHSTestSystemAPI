@@ -1,0 +1,14 @@
+global using Xunit;
+global using Moq;
+global using FluentAssertions;
+global using MCHSWebAPI.DTOs.Common;
+global using MCHSWebAPI.DTOs.Auth;
+global using MCHSWebAPI.DTOs.Users;
+global using MCHSWebAPI.DTOs.Lectures;
+global using MCHSWebAPI.DTOs.Tests;
+global using MCHSWebAPI.DTOs.Testing;
+global using MCHSWebAPI.DTOs.Reports;
+global using MCHSWebAPI.Models;
+global using MCHSWebAPI.Interfaces;
+global using MCHSWebAPI.Interfaces.Services;
+global using MCHSWebAPI.Interfaces.Repositories;

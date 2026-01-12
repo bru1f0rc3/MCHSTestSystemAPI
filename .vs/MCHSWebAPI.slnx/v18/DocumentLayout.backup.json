@@ -1,0 +1,557 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\repositories\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\repositories\\iuserrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\services\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\services\\testservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\services\\testservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\repositories\\itestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\repositories\\itestrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\services\\reportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\services\\reportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\services\\itestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\services\\itestservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\controllers\\testscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\controllers\\testscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\repositories\\testrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\repositories\\testrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\services\\pdfparserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\services\\pdfparserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\repositories\\reportrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\repositories\\reportrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\dtos\\reports\\reportdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\dtos\\reports\\reportdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\repositories\\ireportrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\repositories\\ireportrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\services\\ireportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\services\\ireportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\dtos\\testing\\testingdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\dtos\\testing\\testingdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\data\\dbconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\data\\dbconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\repositories\\answerrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\repositories\\answerrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\common\\result.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\common\\result.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\attributes\\validationattributes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\attributes\\validationattributes.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\models\\learningpath.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\models\\learningpath.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\models\\answer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\models\\answer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\middleware\\requestloggingmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\middleware\\requestloggingmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\repositories\\ilecturerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\repositories\\ilecturerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\repositories\\irolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\repositories\\irolerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\services\\ilectureservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\services\\ilectureservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\mchswebapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\mchswebapi.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\interfaces\\idbconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\interfaces\\idbconnectionfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\dtos\\auth\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\dtos\\auth\\authdtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|c:\\users\\wint1\\source\\repos\\mchswebapi\\mchswebapi\\repositories\\lecturerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BF339273-25F7-1BE6-4E65-68C422B0ED2E}|MCHSWebAPI\\MCHSWebAPI.csproj|solutionrelative:mchswebapi\\repositories\\lecturerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "UserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\UserRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Repositories\\UserRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\UserRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Repositories\\UserRepository.cs",
+              "ViewState": "AgIAAEMAAAAAAAAAAAAiwHcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T14:36:21.069Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "IUserRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IUserRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Repositories\\IUserRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IUserRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Repositories\\IUserRepository.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAgwBEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T14:36:04.054Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\AuthService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Services\\AuthService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\AuthService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Services\\AuthService.cs",
+              "ViewState": "AgIAACEAAAAAAAAAAADwv5gAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T14:35:49.256Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ITestService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\ITestService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Services\\ITestService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\ITestService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Services\\ITestService.cs",
+              "ViewState": "AgIAABcAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T13:00:54.633Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "TestRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\TestRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Repositories\\TestRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\TestRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Repositories\\TestRepository.cs",
+              "ViewState": "AgIAAJAAAAAAAAAAAAAQwKUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T13:00:43.019Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "PdfParserService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\PdfParserService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Services\\PdfParserService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\PdfParserService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Services\\PdfParserService.cs",
+              "ViewState": "AgIAADsAAAAAAAAAAAAQwHoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T12:22:08.261Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "ReportDTOs.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Reports\\ReportDTOs.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\DTOs\\Reports\\ReportDTOs.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Reports\\ReportDTOs.cs",
+              "RelativeToolTip": "MCHSWebAPI\\DTOs\\Reports\\ReportDTOs.cs",
+              "ViewState": "AgIAAC8AAAAAAAAAAAAlwDoAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:01:09.483Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ReportService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\ReportService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Services\\ReportService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\ReportService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Services\\ReportService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:55:55.962Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Controllers\\AuthController.cs",
+              "ViewState": "AgIAADIAAAAAAAAAAAAwwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T21:47:18.386Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "TestService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\TestService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Services\\TestService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Services\\TestService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Services\\TestService.cs",
+              "ViewState": "AgIAAGkAAAAAAAAAAAAuwHYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T13:01:04.813Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "TestsController.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\TestsController.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Controllers\\TestsController.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\TestsController.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Controllers\\TestsController.cs",
+              "ViewState": "AgIAAOgAAAAAAAAAAAAAAPwAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T13:01:15.349Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "ReportsController.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\ReportsController.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Controllers\\ReportsController.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Controllers\\ReportsController.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Controllers\\ReportsController.cs",
+              "ViewState": "AgIAAE0AAAAAAAAAAAAqwGIAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:01:44.099Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ITestRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\ITestRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Repositories\\ITestRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\ITestRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Repositories\\ITestRepository.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAA0wBEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-08T13:01:38.494Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ReportRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\ReportRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Repositories\\ReportRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\ReportRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Repositories\\ReportRepository.cs",
+              "ViewState": "AgIAAJgAAAAAAAAAAAAQwKAAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:00:39.155Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "IReportService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\IReportService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Services\\IReportService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\IReportService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Services\\IReportService.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAAA0AAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:03:39.824Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "TestingDTOs.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Testing\\TestingDTOs.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\DTOs\\Testing\\TestingDTOs.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Testing\\TestingDTOs.cs",
+              "RelativeToolTip": "MCHSWebAPI\\DTOs\\Testing\\TestingDTOs.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAYwCIAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:20:17.402Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "IReportRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IReportRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Repositories\\IReportRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IReportRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Repositories\\IReportRepository.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAADwvxMAAABoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T22:00:05.072Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Program.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Program.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Program.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Program.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAAhwEYAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T16:10:01.434Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "DbConnectionFactory.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Data\\DbConnectionFactory.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Data\\DbConnectionFactory.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Data\\DbConnectionFactory.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Data\\DbConnectionFactory.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T21:47:05.205Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "AnswerRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\AnswerRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Repositories\\AnswerRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\AnswerRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Repositories\\AnswerRepository.cs",
+              "ViewState": "AgIAADwAAAAAAAAAAAAmwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T21:46:20.279Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "Result.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Common\\Result.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Common\\Result.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Common\\Result.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Common\\Result.cs",
+              "ViewState": "AgIAACwAAAAAAAAAAAAAAAUAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:54:39.423Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "ValidationAttributes.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Attributes\\ValidationAttributes.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Attributes\\ValidationAttributes.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Attributes\\ValidationAttributes.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Attributes\\ValidationAttributes.cs",
+              "ViewState": "AgIAAFEAAAAAAAAAAAAkwAsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:53:30.598Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "LearningPath.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Models\\LearningPath.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Models\\LearningPath.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Models\\LearningPath.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Models\\LearningPath.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T21:46:18.176Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "Answer.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Models\\Answer.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Models\\Answer.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Models\\Answer.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Models\\Answer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T21:46:13.282Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "RequestLoggingMiddleware.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Middleware\\RequestLoggingMiddleware.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Middleware\\RequestLoggingMiddleware.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Middleware\\RequestLoggingMiddleware.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Middleware\\RequestLoggingMiddleware.cs",
+              "ViewState": "AgIAABsAAAAAAAAAAAAuwCkAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:57:16.46Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "ILectureRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\ILectureRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Repositories\\ILectureRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\ILectureRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Repositories\\ILectureRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:55:50.936Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "IRoleRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IRoleRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Repositories\\IRoleRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Repositories\\IRoleRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Repositories\\IRoleRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:55:51.953Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "ILectureService.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\ILectureService.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\Services\\ILectureService.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\Services\\ILectureService.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\Services\\ILectureService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:55:46.987Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\appsettings.json",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\appsettings.json",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\appsettings.json",
+              "RelativeToolTip": "MCHSWebAPI\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAB/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-07T18:11:23.509Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "MCHSWebAPI.http",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\MCHSWebAPI.http",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\MCHSWebAPI.http",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\MCHSWebAPI.http",
+              "RelativeToolTip": "MCHSWebAPI\\MCHSWebAPI.http",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
+              "WhenOpened": "2026-01-07T18:56:13.975Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
+              "Title": "IDbConnectionFactory.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\IDbConnectionFactory.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Interfaces\\IDbConnectionFactory.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Interfaces\\IDbConnectionFactory.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Interfaces\\IDbConnectionFactory.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:55:44.079Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "AuthDTOs.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Auth\\AuthDTOs.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\DTOs\\Auth\\AuthDTOs.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\DTOs\\Auth\\AuthDTOs.cs",
+              "RelativeToolTip": "MCHSWebAPI\\DTOs\\Auth\\AuthDTOs.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAgwAkAAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T18:52:27.908Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
+              "Title": "LectureRepository.cs",
+              "DocumentMoniker": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\LectureRepository.cs",
+              "RelativeDocumentMoniker": "MCHSWebAPI\\Repositories\\LectureRepository.cs",
+              "ToolTip": "C:\\Users\\wint1\\source\\repos\\MCHSWebAPI\\MCHSWebAPI\\Repositories\\LectureRepository.cs",
+              "RelativeToolTip": "MCHSWebAPI\\Repositories\\LectureRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T16:29:21.789Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
