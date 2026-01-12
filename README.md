@@ -282,3 +282,4 @@ dotnet test
 
 - [Формат импорта тестов](formatPDFquestionsandanswer.txt)
 - [Скрипт инициализации БД](Database/init.sql)
+- [Скачать мобильное приложение к API](https://github.com/bru1f0rc3/MCHSTestMobileAPP)
