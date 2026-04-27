@@ -1,54 +1,48 @@
-# 🚒 Система тестирования МЧС
+# Система тестирования МЧС — Web API
 
-Веб-API для онлайн-тестирования по профессиональной подготовке МЧС России. Позволяет проходить тесты, изучать учебные материалы и отслеживать прогресс обучения.
+REST API для онлайн-тестирования сотрудников МЧС России. Поддерживает прохождение тестов, просмотр учебных материалов и отслеживание результатов.
 
-## 🛠 Стек технологий
-
-| Технология | Описание |
-|------------|----------|
-| .NET 10.0 | Современная платформа разработки |
-| PostgreSQL | Надежная реляционная база данных |
-| Dapper | Легковесный ORM |
-| JWT | Безопасная аутентификация |
-| Swagger/OpenAPI | Интерактивная документация API |
+**Стек:** .NET 10 · PostgreSQL · Dapper · JWT · Swagger
 
 ---
 
-## 🚀 Быстрый старт
+## Запуск
 
-### Шаг 1: Подготовка базы данных
+**1. База данных**
 
-Установите PostgreSQL и создайте базу данных:
-
-```sql
-CREATE DATABASE mchs_testing;
-```
-
-Примените схему:
+Создайте БД в PostgreSQL и примените схему:
 
 ```bash
-psql -U postgres -d mchs_testing -f Database/init.sql
+psql -U postgres -c "CREATE DATABASE MCHSDB;"
+psql -U postgres -d MCHSDB -f Database/init.sql
 ```
 
-### Шаг 2: Конфигурация
+**2. Конфигурация**
 
-Отредактируйте `appsettings.json`:
+Откройте `MCHSWebAPI/appsettings.json` и укажите свои параметры:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=mchs_testing;Username=postgres;Password=ВАШ_ПАРОЛЬ"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=MCHSDB;Username=postgres;Password=ВАШ_ПАРОЛЬ"
   },
   "Jwt": {
-    "Key": "ВАШ_СЕКРЕТНЫЙ_КЛЮЧ_МИНИМУМ_32_СИМВОЛА",
+    "Key": "СЕКРЕТНЫЙ_КЛЮЧ_МИНИМУМ_32_СИМВОЛА",
     "Issuer": "MCHSWebAPI",
     "Audience": "MCHSMobileApp",
     "ExpirationHours": 24
+  },
+  "Smtp": {
+    "Host": "smtp.mail.ru",
+    "Port": 587,
+    "Username": "ВАШ_EMAIL",
+    "Password": "ВАШ_ПАРОЛЬ",
+    "FromName": "МЧС Система тестирования"
   }
 }
 ```
 
-### Шаг 3: Запуск
+**3. Запуск**
 
 ```bash
 cd MCHSWebAPI
@@ -56,21 +50,19 @@ dotnet restore
 dotnet run
 ```
 
-API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
+API доступен на `http://localhost:5000`, Swagger — на `http://localhost:5000/swagger`.
 
 ---
 
-## 📝 Импорт тестов
+## Импорт тестов
 
-Для быстрого добавления тестов используйте текстовый формат. Пример: [`formatPDFquestionsandanswer.txt`](formatPDFquestionsandanswer.txt)
-
-**Формат файла:**
+Тесты можно загружать через текстовый файл (см. [`formatPDFquestionsandanswer.txt`](formatPDFquestionsandanswer.txt)):
 
 ```
 Название теста
 1. Текст вопроса?
 а) Вариант 1
-б) Вариант 2 [true]  ← правильный ответ
+б) Правильный вариант [true]
 в) Вариант 3
 г) Вариант 4
 
@@ -78,27 +70,26 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 ...
 ```
 
-**Правила:**
 - Первая строка — название теста
-- Вопросы начинаются с номера (`1.`, `2.`)
-- Ответы обозначаются буквами (`а)`, `б)`, `в)`, `г)`)
+- Вопросы нумеруются: `1.`, `2.`, ...
+- Ответы обозначаются: `а)`, `б)`, `в)`, `г)`
 - Правильный ответ помечается `[true]`
 
 ---
 
-## 🔌 API Эндпоинты
+## API Эндпоинты
 
-### 🔐 Аутентификация `/api/auth`
+### Аутентификация `/api/auth`
 
 | Метод | Endpoint | Описание | Доступ |
 |-------|----------|----------|--------|
 | POST | `/login` | Вход в систему | Публичный |
-| POST | `/register` | Регистрация пользователя | Публичный |
-| POST | `/guest` | Создание гостевого аккаунта | Публичный |
+| POST | `/register` | Регистрация | Публичный |
+| POST | `/guest` | Гостевой аккаунт | Публичный |
 | POST | `/change-password` | Смена пароля | Авторизован |
-| GET | `/me` | Информация о текущем пользователе | Авторизован |
+| GET | `/me` | Текущий пользователь | Авторизован |
 
-### 👥 Пользователи `/api/users`
+### Пользователи `/api/users`
 
 Управление пользователями (только админ).
 
@@ -110,7 +101,7 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 | PUT | `/{id}` | Обновить пользователя |
 | DELETE | `/{id}` | Удалить пользователя |
 
-### 📚 Лекции `/api/lectures`
+### Лекции `/api/lectures`
 
 | Метод | Endpoint | Описание | Доступ |
 |-------|----------|----------|--------|
@@ -120,7 +111,7 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 | PUT | `/{id}` | Обновить лекцию | Админ |
 | DELETE | `/{id}` | Удалить лекцию | Админ |
 
-### 📋 Тесты `/api/tests`
+### Тесты `/api/tests`
 
 | Метод | Endpoint | Описание | Доступ |
 |-------|----------|----------|--------|
@@ -138,7 +129,7 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 | PUT | `/answers/{id}` | Обновить ответ | Админ |
 | DELETE | `/answers/{id}` | Удалить ответ | Админ |
 
-### ✅ Прохождение тестов `/api/testing`
+### Прохождение тестов `/api/testing`
 
 | Метод | Endpoint | Описание | Доступ |
 |-------|----------|----------|--------|
@@ -151,7 +142,7 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 | GET | `/my-results` | История результатов | Авторизован |
 | GET | `/all-results` | Все результаты | Админ |
 
-### 📊 Отчеты `/api/reports`
+### Отчеты `/api/reports`
 
 Только для администраторов.
 
@@ -166,28 +157,31 @@ API: `https://localhost:5001/` | Swagger: `https://localhost:5001/swagger`
 
 ---
 
-## 📁 Структура проекта
+## Структура проекта
 
 ```
 MCHSWebAPI/
 ├── Controllers/       API контроллеры
-├── Data/              Подключение к БД
-├── DTOs/              Модели для API
+├── Data/              Подключение к БД и инициализация
+├── DTOs/              Объекты для запросов и ответов
 ├── Models/            Модели данных
-├── Repositories/      Слой доступа к данным
 ├── Services/          Бизнес-логика
-├── Middleware/        Логирование, обработка ошибок
-├── Attributes/        Валидация
+├── Properties/        Настройки запуска
 ├── appsettings.json   Конфигурация
 └── Program.cs         Точка входа
 
+MCHSWebAPI.Tests/
+├── Controllers/       Тесты контроллеров
+├── Services/          Тесты сервисов
+└── Helpers/           Вспомогательные фабрики данных
+
 Database/
-└── init.sql           Скрипт инициализации БД
+└── init.sql           Схема и начальные данные БД
 ```
 
 ---
 
-## 💡 Примеры использования
+## Примеры использования
 
 ### Регистрация
 
@@ -236,7 +230,7 @@ curl -X POST https://localhost:5001/api/testing/42/finish \
 
 ---
 
-## 🔐 Роли пользователей
+## Роли пользователей
 
 | Роль | Описание | Возможности |
 |------|----------|-------------|
@@ -248,7 +242,7 @@ curl -X POST https://localhost:5001/api/testing/42/finish \
 
 ---
 
-## 🔑 Учетные данные по умолчанию
+## Учетные данные по умолчанию
 
 После выполнения `init.sql` создается администратор:
 
@@ -269,7 +263,7 @@ UPDATE users SET password_hash = 'ХЕШ' WHERE username = 'admin';
 
 ---
 
-## 🧪 Тестирование
+## Тестирование
 
 ```bash
 cd MCHSWebAPI.Tests
@@ -278,7 +272,7 @@ dotnet test
 
 ---
 
-## 📌 Полезные ссылки
+## Ссылки
 
 - [Формат импорта тестов](formatPDFquestionsandanswer.txt)
 - [Скрипт инициализации БД](Database/init.sql)
