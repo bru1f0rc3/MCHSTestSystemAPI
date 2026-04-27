@@ -1,0 +1,6 @@
+@MCHSWebAPI_HostAddress = http://localhost:5172
+
+GET {{MCHSWebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
