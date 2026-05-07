@@ -1,14 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using System.Security.Claims;
 using MCHSWebAPI.Services.TestService.TestService;
 
 namespace MCHSWebAPI.Controllers.TestController;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TestsController : ControllerBase
+public class TestsController : AuthorizedControllerBase
 {
     private readonly ITestService _testService;
 
@@ -16,6 +15,7 @@ public class TestsController : ControllerBase
     {
         _testService = testService;
     }
+
     [HttpGet]
     [Authorize]
     public async Task<ActionResult<ApiResponse<PagedResponse<TestDto>>>> GetAll(
@@ -57,8 +57,7 @@ public class TestsController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<TestDto>>> Create([FromBody] CreateTestRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _testService.CreateAsync(request, userId);
+        var result = await _testService.CreateAsync(request, GetUserId());
         if (result == null)
             return BadRequest(ApiResponse<TestDto>.Fail("Не удалось создать тест"));
 
@@ -148,20 +147,12 @@ public class TestsController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<TestDto>>> ImportFromPdf([FromForm] ImportTestFromPdfDto request)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out int userId))
-            return Unauthorized(ApiResponse<TestDto>.Fail("Пользователь не авторизован"));
-
         try
         {
             using var stream = request.PdfFile.OpenReadStream();
             var result = await _testService.ImportFromPdfAsync(
-                request.LectureId,
-                request.Title,
-                request.Description,
-                request.TimeLimitMinutes,
-                stream,
-                userId);
+                request.LectureId, request.Title, request.Description,
+                request.TimeLimitMinutes, stream, GetUserId());
 
             if (result == null)
                 return BadRequest(ApiResponse<TestDto>.Fail("Не удалось импортировать тест из PDF"));
@@ -183,8 +174,7 @@ public class TestsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _testService.GetAvailableForUserAsync(userId, page, pageSize);
+        var result = await _testService.GetAvailableForUserAsync(GetUserId(), page, pageSize);
         return Ok(ApiResponse<PagedResponse<TestDto>>.Ok(result));
     }
 }

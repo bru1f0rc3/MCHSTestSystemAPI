@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxConcurrentConnections = 100_000;
-    options.Limits.MaxRequestBodySize = 5L * 1024 * 1024 * 1024;
+    options.Limits.MaxRequestBodySize = 50L * 1024 * 1024;
     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
 });
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -100,16 +100,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
-var storagePath = Path.Combine(app.Environment.ContentRootPath, "storage");
-if (!Directory.Exists(storagePath))
-    Directory.CreateDirectory(storagePath);
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(storagePath),
-    RequestPath = "/storage",
-    ServeUnknownFileTypes = true
-});
 
 app.MapControllers();
 app.MapScalarApiReference(options =>

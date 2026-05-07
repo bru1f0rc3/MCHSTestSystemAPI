@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using System.Security.Claims;
 using MCHSWebAPI.Services.TestService.TestService;
 
 namespace MCHSWebAPI.Controllers.TestController;
@@ -9,7 +8,7 @@ namespace MCHSWebAPI.Controllers.TestController;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class TestingController : ControllerBase
+public class TestingController : AuthorizedControllerBase
 {
     private readonly ITestingService _testingService;
 
@@ -18,7 +17,6 @@ public class TestingController : ControllerBase
         _testingService = testingService;
     }
 
-    private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     [HttpPost("start/{testId}")]
     public async Task<ActionResult<ApiResponse<StartTestResponse>>> StartTest(int testId)
     {

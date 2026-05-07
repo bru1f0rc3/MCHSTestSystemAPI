@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
 using MCHSWebAPI.Models;
@@ -84,6 +84,7 @@ public class TestService : ITestService
                 Id = q.Id,
                 QuestionText = q.QuestionText,
                 Position = q.Position,
+                AllowMultipleAnswers = q.Answers?.Count(a => a.IsCorrect) > 1,
                 Answers = q.Answers?.Select(a => new AnswerDto
                 {
                     Id = a.Id,
@@ -231,10 +232,6 @@ public class TestService : ITestService
         parameters.Add("Id", id);
 
         if (request.LectureId.HasValue) { sets.Add("lecture_id = @LectureId"); parameters.Add("LectureId", request.LectureId.Value); }
-        else if (request.LectureId is null && request.Title != null)
-        {
-        }
-
         if (request.Title != null) { sets.Add("title = @Title"); parameters.Add("Title", request.Title); }
         if (request.Description != null) { sets.Add("description = @Description"); parameters.Add("Description", request.Description); }
         if (request.TimeLimitMinutes.HasValue) { sets.Add("time_limit_minutes = @TimeLimitMinutes"); parameters.Add("TimeLimitMinutes", request.TimeLimitMinutes.Value); }
@@ -295,6 +292,7 @@ public class TestService : ITestService
                 Id = question!.Id,
                 QuestionText = question.QuestionText,
                 Position = question.Position,
+                AllowMultipleAnswers = answers.Count(a => a.IsCorrect) > 1,
                 Answers = answers.Select(a => new AnswerDto
                 {
                     Id = a.Id,

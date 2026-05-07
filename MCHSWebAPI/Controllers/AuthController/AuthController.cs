@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using System.Security.Claims;
 using MCHSWebAPI.Services.AuthService.AuthService;
 using MCHSWebAPI.Services.VerificationService;
 
@@ -9,7 +8,7 @@ namespace MCHSWebAPI.Controllers.AuthController;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthController : AuthorizedControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IVerificationService _verificationService;
@@ -19,6 +18,7 @@ public class AuthController : ControllerBase
         _authService = authService;
         _verificationService = verificationService;
     }
+
     [HttpPost("login")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginRequest request)
     {
@@ -65,7 +65,7 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<ActionResult<ApiResponse<bool>>> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var result = await _authService.ChangePasswordAsync(userId, request);
 
         if (!result)
@@ -77,7 +77,7 @@ public class AuthController : ControllerBase
     [HttpPost("change-password/request-code")]
     public async Task<ActionResult<ApiResponse<MessageResponse>>> RequestChangePasswordCode()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var masked = await _authService.SendChangePasswordCodeAsync(userId);
         if (string.IsNullOrWhiteSpace(masked))
             return BadRequest(ApiResponse<MessageResponse>.Fail("Не удалось отправить код (проверьте email профиля)"));
@@ -90,7 +90,7 @@ public class AuthController : ControllerBase
     [HttpGet("me")]
     public async Task<ActionResult<ApiResponse<UserProfileResponse>>> GetCurrentUser()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var profile = await _authService.GetProfileAsync(userId);
         if (profile == null)
             return NotFound(ApiResponse<UserProfileResponse>.Fail("Пользователь не найден"));
@@ -102,7 +102,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<UserProfileResponse>>> UpdateProfile(
         [FromBody] UpdateProfileRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var profile = await _authService.UpdateProfileAsync(userId, request);
         if (profile == null)
             return NotFound(ApiResponse<UserProfileResponse>.Fail("Пользователь не найден"));
@@ -175,7 +175,7 @@ public class AuthController : ControllerBase
     [HttpPost("change-email/request-current-code")]
     public async Task<ActionResult<ApiResponse<MessageResponse>>> RequestCurrentEmailCode()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var masked = await _verificationService.RequestCurrentEmailChangeCodeAsync(userId);
         if (string.IsNullOrWhiteSpace(masked))
             return BadRequest(ApiResponse<MessageResponse>.Fail("Текущая почта не найдена или нельзя отправить код"));
@@ -189,7 +189,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> VerifyCurrentEmailCode(
         [FromBody] ConfirmNewEmailRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var ok = await _verificationService.ConfirmCurrentEmailCodeAsync(userId, request.Code);
         if (!ok)
             return BadRequest(ApiResponse<bool>.Fail("Неверный код текущей почты"));
@@ -200,7 +200,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<MessageResponse>>> RequestNewEmailCode(
         [FromBody] RequestNewEmailCodeRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var masked = await _verificationService.RequestNewEmailCodeAsync(userId, request.NewEmail);
         if (string.IsNullOrWhiteSpace(masked))
             return BadRequest(ApiResponse<MessageResponse>.Fail("Не удалось отправить код на новую почту"));
@@ -213,7 +213,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse<bool>>> ConfirmNewEmail(
         [FromBody] ConfirmNewEmailFinalizeRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var result = await _verificationService.ConfirmNewEmailDetailedAsync(userId, request.Code, request.NewEmail);
         if (!result.Success)
             return BadRequest(ApiResponse<bool>.Fail(result.Error ?? "Не удалось подтвердить новую почту"));
@@ -223,7 +223,7 @@ public class AuthController : ControllerBase
     [HttpPost("delete-account/request-code")]
     public async Task<ActionResult<ApiResponse<MessageResponse>>> RequestDeleteAccountCode()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var masked = await _authService.SendDeleteAccountCodeAsync(userId);
         if (string.IsNullOrWhiteSpace(masked))
             return BadRequest(ApiResponse<MessageResponse>.Fail("Не удалось отправить код для удаления"));
@@ -235,7 +235,7 @@ public class AuthController : ControllerBase
     [HttpPost("delete-account")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteAccount([FromBody] DeleteAccountRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = GetUserId();
         var ok = await _authService.DeleteCurrentUserAsync(userId, request.Code);
         if (!ok)
             return BadRequest(ApiResponse<bool>.Fail("Не удалось удалить аккаунт (код неверен или есть связанные данные)"));

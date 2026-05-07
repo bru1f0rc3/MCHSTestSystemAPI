@@ -1,4 +1,5 @@
-﻿namespace MCHSWebAPI.Tests.Helpers;
+namespace MCHSWebAPI.Tests.Helpers;
+
 public static class TestDataFactory
 {
     public static AuthResponse CreateAuthResponse(int userId = 1, string username = "testuser", string role = "user")
@@ -8,17 +9,14 @@ public static class TestDataFactory
             Token = "test-jwt-token",
             UserId = userId,
             Username = username,
-            Role = role
+            Role = role,
+            ExpiresAt = DateTime.UtcNow.AddHours(24)
         };
     }
 
     public static LoginRequest CreateLoginRequest(string username = "testuser", string password = "password123")
     {
-        return new LoginRequest
-        {
-            Username = username,
-            Password = password
-        };
+        return new LoginRequest { Username = username, Password = password };
     }
 
     public static RegisterRequest CreateRegisterRequest(string username = "newuser", string password = "password123")
@@ -26,7 +24,9 @@ public static class TestDataFactory
         return new RegisterRequest
         {
             Username = username,
-            Password = password
+            Password = password,
+            Email = "user@example.com",
+            VerificationCode = "123456"
         };
     }
 
@@ -43,11 +43,7 @@ public static class TestDataFactory
 
     public static CreateLectureRequest CreateLectureRequest(string title = "Новая лекция")
     {
-        return new CreateLectureRequest
-        {
-            Title = title,
-            TextContent = "Содержание"
-        };
+        return new CreateLectureRequest { Title = title, TextContent = "Содержание" };
     }
 
     public static TestDto CreateTestDto(int id = 1, string title = "Тестовый тест")
@@ -73,12 +69,12 @@ public static class TestDataFactory
         };
     }
 
-    public static PagedResponse<T> CreatePagedResponse<T>(List<T> items, int totalCount = 0, int page = 1, int pageSize = 20)
+    public static PagedResponse<T> CreatePagedResponse<T>(List<T> items, int page = 1, int pageSize = 20)
     {
         return new PagedResponse<T>
         {
             Items = items,
-            TotalCount = totalCount > 0 ? totalCount : items.Count,
+            TotalCount = items.Count,
             Page = page,
             PageSize = pageSize
         };

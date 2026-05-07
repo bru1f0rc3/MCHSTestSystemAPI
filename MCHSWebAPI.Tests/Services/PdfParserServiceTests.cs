@@ -1,18 +1,22 @@
-﻿namespace MCHSWebAPI.Tests.Services;
+namespace MCHSWebAPI.Tests.Services;
 
 public class PdfParserServiceTests
 {
-    private readonly PdfParserService _service;
+    private readonly PdfParserService _service = new();
 
-    public PdfParserServiceTests()
+    [Fact]
+    public async Task ParseTestFromPdfAsync_WithBrokenPdf_Throws()
     {
-        _service = new PdfParserService();
+        using var stream = new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 });
+
+        await Assert.ThrowsAnyAsync<Exception>(() => _service.ParseTestFromPdfAsync(stream));
     }
 
     [Fact]
-    public async Task ParseTestFromPdfAsync_WithEmptyPdf_ThrowsInvalidOperation()
+    public async Task ParseTestFromPdfAsync_WithEmptyStream_Throws()
     {
-        using var stream = new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }); // "%PDF" header
+        using var stream = new MemoryStream(Array.Empty<byte>());
+
         await Assert.ThrowsAnyAsync<Exception>(() => _service.ParseTestFromPdfAsync(stream));
     }
 }

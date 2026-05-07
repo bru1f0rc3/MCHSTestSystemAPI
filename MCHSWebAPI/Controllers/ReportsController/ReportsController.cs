@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using System.Security.Claims;
 using MCHSWebAPI.Services.ReportService.ReportService;
 
 namespace MCHSWebAPI.Controllers.ReportsController;
@@ -9,7 +8,7 @@ namespace MCHSWebAPI.Controllers.ReportsController;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class ReportsController : ControllerBase
+public class ReportsController : AuthorizedControllerBase
 {
     private readonly IReportService _reportService;
 
@@ -17,11 +16,11 @@ public class ReportsController : ControllerBase
     {
         _reportService = reportService;
     }
+
     [HttpGet("my-stats")]
     public async Task<ActionResult<ApiResponse<UserStatisticsDto>>> GetMyStatistics()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _reportService.GetUserStatisticsAsync(userId);
+        var result = await _reportService.GetUserStatisticsAsync(GetUserId());
         if (result == null)
             return NotFound(ApiResponse<UserStatisticsDto>.Fail("Статистика не найдена"));
         return Ok(ApiResponse<UserStatisticsDto>.Ok(result));
@@ -130,8 +129,7 @@ public class ReportsController : ControllerBase
     [Authorize(Roles = "admin")]
     public async Task<ActionResult<ApiResponse<ReportDto>>> Create([FromBody] CreateReportRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await _reportService.CreateAsync(request, userId);
+        var result = await _reportService.CreateAsync(request, GetUserId());
         if (result == null)
             return BadRequest(ApiResponse<ReportDto>.Fail("Не удалось создать отчет"));
 

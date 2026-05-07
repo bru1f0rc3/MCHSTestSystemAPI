@@ -28,6 +28,7 @@ public class EmailService : IEmailService
             "email_change_new" => "Подтверждение нового email",
             "registration" => "Подтверждение регистрации",
             "password_change" => "Подтверждение смены пароля",
+            "account_delete" => "Удаление аккаунта",
             _ => "Подтверждение"
         };
 
@@ -39,6 +40,7 @@ public class EmailService : IEmailService
             "email_change_new" => "Подтвердите новый email, чтобы завершить смену адреса.",
             "registration" => "Вы регистрируетесь в системе тестирования МЧС.",
             "password_change" => "Подтвердите смену пароля для вашей учетной записи.",
+            "account_delete" => "Подтвердите удаление вашего аккаунта в системе тестирования МЧС.",
             _ => "Вы запросили подтверждение действия."
         };
 

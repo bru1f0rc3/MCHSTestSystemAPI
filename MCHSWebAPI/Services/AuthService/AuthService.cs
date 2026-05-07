@@ -1,9 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Dapper;
 using MCHSWebAPI.Data;
+using MCHSWebAPI.Helpers;
 using MCHSWebAPI.Models;
 using MCHSWebAPI.DTOs;
 using MCHSWebAPI.Services.VerificationService;
@@ -96,23 +97,15 @@ public class AuthService : IAuthService
 
     public async Task<GuestStatusResponse> GetGuestStatusAsync(string deviceId)
     {
+        var noAccount = new GuestStatusResponse { HasExistingAccount = false, IsGuestAccount = false };
+
         if (string.IsNullOrWhiteSpace(deviceId))
-        {
-            return new GuestStatusResponse
-            {
-                HasExistingAccount = false,
-                IsGuestAccount = false,
-            };
-        }
+            return noAccount;
+
         var user = await GetUserByDeviceIdAsync(deviceId);
         if (user == null)
-        {
-            return new GuestStatusResponse
-            {
-                HasExistingAccount = false,
-                IsGuestAccount = false,
-            };
-        }
+            return noAccount;
+
         return new GuestStatusResponse
         {
             HasExistingAccount = true,
@@ -211,7 +204,7 @@ public class AuthService : IAuthService
 
         var email = user.Email.Trim().ToLowerInvariant();
         var sent = await _verification.SendCodeAsync(email, "password_reset");
-        return sent ? MaskEmail(email) : null;
+        return sent ? EmailHelper.MaskEmail(email) : null;
     }
 
     public async Task<bool> ConfirmPasswordResetAsync(string loginOrEmail, string code, string newPassword)
@@ -231,7 +224,7 @@ public class AuthService : IAuthService
             return null;
         var email = user.Email.Trim().ToLowerInvariant();
         var sent = await _verification.SendCodeAsync(email, "password_change");
-        return sent ? MaskEmail(email) : null;
+        return sent ? EmailHelper.MaskEmail(email) : null;
     }
 
     public async Task<string?> SendDeleteAccountCodeAsync(int userId)
@@ -241,7 +234,7 @@ public class AuthService : IAuthService
             return null;
         var email = user.Email.Trim().ToLowerInvariant();
         var sent = await _verification.SendCodeAsync(email, "account_delete");
-        return sent ? MaskEmail(email) : null;
+        return sent ? EmailHelper.MaskEmail(email) : null;
     }
 
     public async Task<bool> DeleteCurrentUserAsync(int userId, string code)
@@ -420,16 +413,4 @@ public class AuthService : IAuthService
             "SELECT id, name FROM roles WHERE name = @Name", new { Name = name });
     }
 
-    private static string MaskEmail(string email)
-    {
-        var trimmed = email.Trim();
-        var at = trimmed.IndexOf('@');
-        if (at <= 1 || at == trimmed.Length - 1) return trimmed;
-        var local = trimmed[..at];
-        var domain = trimmed[(at + 1)..];
-        if (local.Length <= 4) return $"{local[0]}***@{domain}";
-        var prefix = local[..4];
-        var suffix = local[^2..];
-        return $"{prefix}{new string('*', Math.Max(3, local.Length - 6))}{suffix}@{domain}";
-    }
 }

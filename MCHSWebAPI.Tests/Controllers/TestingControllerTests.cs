@@ -1,4 +1,3 @@
-﻿using MCHSWebAPI.Controllers;
 using MCHSWebAPI.Tests.Helpers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,7 @@ public class TestingControllerTests
     {
         _testingServiceMock = new Mock<ITestingService>();
         _controller = new TestingController(_testingServiceMock.Object);
-        SetupUser(_controller, 1);
+        SetUserId(_controller, 1);
     }
 
     [Fact]
@@ -23,62 +22,128 @@ public class TestingControllerTests
         var response = new StartTestResponse
         {
             TestResultId = 1,
+            TestId = 1,
             TestTitle = "Тест",
+            StartedAt = DateTime.UtcNow,
             Questions = new List<TestQuestionDto>()
         };
         _testingServiceMock.Setup(s => s.StartTestAsync(1, 1)).ReturnsAsync(response);
+
         var result = await _controller.StartTest(1);
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task StartTest_WhenTestNotExists_ReturnsNotFound()
     {
         _testingServiceMock.Setup(s => s.StartTestAsync(999, 1)).ReturnsAsync((StartTestResponse?)null);
+
         var result = await _controller.StartTest(999);
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
-    }
 
-    [Fact]
-    public async Task FinishTest_Success_ReturnsOk()
-    {
-        var response = new FinishTestResponse { Score = 80, TotalQuestions = 10, CorrectAnswers = 8, Status = "passed" };
-        _testingServiceMock.Setup(s => s.FinishTestAsync(1, 1)).ReturnsAsync(response);
-        var result = await _controller.FinishTest(1);
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task FinishTest_NotFound_ReturnsNotFound()
-    {
-        _testingServiceMock.Setup(s => s.FinishTestAsync(999, 1)).ReturnsAsync((FinishTestResponse?)null);
-        var result = await _controller.FinishTest(999);
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]
     public async Task SubmitAnswer_Success_ReturnsOk()
     {
-        var request = new SubmitAnswerRequest { QuestionId = 1, AnswerId = 1 };
+        var request = new SubmitAnswerRequest { QuestionId = 1, AnswerId = 2 };
         _testingServiceMock.Setup(s => s.SubmitAnswerAsync(1, 1, request)).ReturnsAsync(true);
+
         var result = await _controller.SubmitAnswer(1, request);
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_Failure_ReturnsBadRequest()
+    {
+        var request = new SubmitAnswerRequest { QuestionId = 1, AnswerId = 2 };
+        _testingServiceMock.Setup(s => s.SubmitAnswerAsync(1, 1, request)).ReturnsAsync(false);
+
+        var result = await _controller.SubmitAnswer(1, request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task SubmitAnswers_Success_ReturnsOk()
+    {
+        var request = new SubmitAnswersRequest
+        {
+            Answers = new List<SubmitAnswerRequest>
+            {
+                new() { QuestionId = 1, AnswerId = 2 }
+            }
+        };
+        _testingServiceMock.Setup(s => s.SubmitAnswersAsync(1, 1, request)).ReturnsAsync(true);
+
+        var result = await _controller.SubmitAnswers(1, request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task FinishTest_Success_ReturnsOk()
+    {
+        var response = new FinishTestResponse
+        {
+            TestResultId = 1,
+            Score = 80,
+            TotalQuestions = 10,
+            CorrectAnswers = 8,
+            Status = "passed"
+        };
+        _testingServiceMock.Setup(s => s.FinishTestAsync(1, 1)).ReturnsAsync(response);
+
+        var result = await _controller.FinishTest(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task FinishTest_NotFound_ReturnsNotFound()
+    {
+        _testingServiceMock.Setup(s => s.FinishTestAsync(999, 1)).ReturnsAsync((FinishTestResponse?)null);
+
+        var result = await _controller.FinishTest(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetResult_WhenExists_ReturnsOk()
+    {
+        var dto = new TestResultDto { Id = 1, TestId = 1, TestTitle = "Тест", Status = "passed" };
+        _testingServiceMock.Setup(s => s.GetTestResultAsync(1, 1)).ReturnsAsync(dto);
+
+        var result = await _controller.GetResult(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetResult_WhenNotExists_ReturnsNotFound()
+    {
+        _testingServiceMock.Setup(s => s.GetTestResultAsync(999, 1)).ReturnsAsync((TestResultDto?)null);
+
+        var result = await _controller.GetResult(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]
     public async Task GetMyResults_ReturnsOk()
     {
-        var results = TestDataFactory.CreatePagedResponse(new List<TestResultDto>());
-        _testingServiceMock.Setup(s => s.GetUserResultsAsync(1, 1, 20)).ReturnsAsync(results);
+        var paged = TestDataFactory.CreatePagedResponse(new List<TestResultDto>());
+        _testingServiceMock.Setup(s => s.GetUserResultsAsync(1, 1, 20)).ReturnsAsync(paged);
+
         var result = await _controller.GetMyResults();
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
-    private static void SetupUser(ControllerBase controller, int userId)
+    private static void SetUserId(ControllerBase controller, int userId)
     {
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
         var identity = new ClaimsIdentity(claims, "test");

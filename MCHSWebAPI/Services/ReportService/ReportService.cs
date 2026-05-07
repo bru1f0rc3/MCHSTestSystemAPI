@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
 using MCHSWebAPI.Models;
@@ -10,6 +10,12 @@ public class ReportService : IReportService
 {
     private readonly IDbConnectionFactory _db;
 
+    private const string ReportSelectSql = @"
+        SELECT r.id, r.created_by as CreatedBy, r.report_date as ReportDate,
+               r.content::text as Content, r.created_at as CreatedAt,
+               u.username as CreatorUsername
+        FROM reports r JOIN users u ON r.created_by = u.id";
+
     public ReportService(IDbConnectionFactory db)
     {
         _db = db;
@@ -19,29 +25,19 @@ public class ReportService : IReportService
     {
         using var connection = _db.CreateConnection();
         var report = await connection.QueryFirstOrDefaultAsync<Report>(
-            @"SELECT r.id, r.created_by as CreatedBy, r.report_date as ReportDate,
-                     r.content::text as Content, r.created_at as CreatedAt,
-                     u.username as CreatorUsername
-              FROM reports r JOIN users u ON r.created_by = u.id
-              WHERE r.id = @Id",
-            new { Id = id });
-
+            $"{ReportSelectSql} WHERE r.id = @Id", new { Id = id });
         return report == null ? null : MapToDto(report);
     }
 
     public async Task<PagedResponse<ReportDto>> GetAllAsync(int page, int pageSize)
     {
         using var connection = _db.CreateConnection();
-
         var totalCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM reports");
 
         var reports = await connection.QueryAsync<Report>(
-            @"SELECT r.id, r.created_by as CreatedBy, r.report_date as ReportDate,
-                     r.content::text as Content, r.created_at as CreatedAt,
-                     u.username as CreatorUsername
-              FROM reports r JOIN users u ON r.created_by = u.id
-              ORDER BY r.created_at DESC
-              LIMIT @PageSize OFFSET @Offset",
+            $@"{ReportSelectSql}
+               ORDER BY r.created_at DESC
+               LIMIT @PageSize OFFSET @Offset",
             new { PageSize = pageSize, Offset = (page - 1) * pageSize });
 
         return new PagedResponse<ReportDto>
@@ -103,17 +99,18 @@ public class ReportService : IReportService
                 "SELECT COALESCE(AVG(score), 0) FROM test_results WHERE finished_at IS NOT NULL")
         };
 
-        var completedCount = dashboard.TotalCompletedTests;
-        if (completedCount > 0)
+        if (dashboard.TotalCompletedTests > 0)
         {
             var passedCount = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM test_results WHERE score >= 70 AND finished_at IS NOT NULL");
-            dashboard.OverallPassRate = (passedCount * 100.0) / completedCount;
+                @"SELECT COUNT(*) FROM test_results tr
+                  JOIN tests t ON tr.test_id = t.id
+                  WHERE tr.score >= t.passing_score AND tr.finished_at IS NOT NULL");
+            dashboard.OverallPassRate = (passedCount * 100.0) / dashboard.TotalCompletedTests;
         }
 
         dashboard.RecentActivity = (await connection.QueryAsync<RecentActivityDto>(
             @"SELECT u.username as Username, t.title as TestTitle, tr.score,
-                     CASE WHEN tr.score >= 70 THEN 'passed' ELSE 'failed' END as Status,
+                     CASE WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END as Status,
                      tr.finished_at as CompletedAt
               FROM test_results tr
               JOIN users u ON tr.user_id = u.id
@@ -132,12 +129,12 @@ public class ReportService : IReportService
                 t.id as TestId, t.title as TestTitle,
                 COUNT(tr.id) as TotalAttempts,
                 COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) as CompletedAttempts,
-                COUNT(CASE WHEN tr.score >= 70 AND tr.finished_at IS NOT NULL THEN 1 END) as PassedAttempts,
-                COUNT(CASE WHEN tr.score < 70 AND tr.finished_at IS NOT NULL THEN 1 END) as FailedAttempts,
+                COUNT(CASE WHEN tr.score >= t.passing_score AND tr.finished_at IS NOT NULL THEN 1 END) as PassedAttempts,
+                COUNT(CASE WHEN tr.score < t.passing_score AND tr.finished_at IS NOT NULL THEN 1 END) as FailedAttempts,
                 COALESCE(AVG(CASE WHEN tr.finished_at IS NOT NULL THEN tr.score END), 0) as AverageScore,
                 CASE
                     WHEN COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) > 0
-                    THEN (COUNT(CASE WHEN tr.score >= 70 AND tr.finished_at IS NOT NULL THEN 1 END) * 100.0 /
+                    THEN (COUNT(CASE WHEN tr.score >= t.passing_score AND tr.finished_at IS NOT NULL THEN 1 END) * 100.0 /
                           COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END))
                     ELSE 0
                 END as PassRate
@@ -155,17 +152,18 @@ public class ReportService : IReportService
                 u.id as UserId, u.username as Username,
                 COUNT(tr.id) as TotalTestsTaken,
                 COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) as TestsCompleted,
-                COUNT(CASE WHEN tr.score >= 70 AND tr.finished_at IS NOT NULL THEN 1 END) as TestsPassed,
-                COUNT(CASE WHEN tr.score < 70 AND tr.finished_at IS NOT NULL THEN 1 END) as TestsFailed,
+                COUNT(CASE WHEN tr.finished_at IS NOT NULL AND tr.score >= t.passing_score THEN 1 END) as TestsPassed,
+                COUNT(CASE WHEN tr.finished_at IS NOT NULL AND tr.score < t.passing_score THEN 1 END) as TestsFailed,
                 COALESCE(AVG(CASE WHEN tr.finished_at IS NOT NULL THEN tr.score END), 0) as AverageScore,
                 CASE
                     WHEN COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) > 0
-                    THEN (COUNT(CASE WHEN tr.score >= 70 AND tr.finished_at IS NOT NULL THEN 1 END) * 100.0 /
+                    THEN (COUNT(CASE WHEN tr.finished_at IS NOT NULL AND tr.score >= t.passing_score THEN 1 END) * 100.0 /
                           COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END))
                     ELSE 0
                 END as PassRate
               FROM users u
               LEFT JOIN test_results tr ON u.id = tr.user_id
+              LEFT JOIN tests t ON tr.test_id = t.id
               WHERE u.id = @UserId
               GROUP BY u.id, u.username",
             new { UserId = userId });
@@ -180,19 +178,20 @@ public class ReportService : IReportService
 
         var users = await connection.QueryAsync<UserPerformanceDto>(
             @"SELECT
-                u.id as UserId, u.username as Username,
+                u.id as UserId, u.username as Username, u.email as Email,
                 COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) as TestsCompleted,
                 COALESCE(AVG(CASE WHEN tr.finished_at IS NOT NULL THEN tr.score END), 0) as AverageScore,
                 CASE
                     WHEN COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) > 0
-                    THEN (COUNT(CASE WHEN tr.score >= 70 AND tr.finished_at IS NOT NULL THEN 1 END) * 100.0 /
+                    THEN (COUNT(CASE WHEN tr.finished_at IS NOT NULL AND tr.score >= t.passing_score THEN 1 END) * 100.0 /
                           COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END))
                     ELSE 0
                 END as PassRate,
                 MAX(tr.finished_at) as LastActivity
               FROM users u
               LEFT JOIN test_results tr ON u.id = tr.user_id
-              GROUP BY u.id, u.username
+              LEFT JOIN tests t ON tr.test_id = t.id
+              GROUP BY u.id, u.username, u.email
               HAVING COUNT(tr.id) > 0
               ORDER BY TestsCompleted DESC, AverageScore DESC
               LIMIT @PageSize OFFSET @Offset",
@@ -208,74 +207,37 @@ public class ReportService : IReportService
     }
 
     public async Task<DetailedReportDto> GetDetailedReportAsync(
-        DateTime? startDate,
-        DateTime? endDate,
-        int? userId,
-        int? testId)
+        DateTime? startDate, DateTime? endDate, int? userId, int? testId)
     {
         using var connection = _db.CreateConnection();
 
-        var where = new List<string>();
-        var p = new DynamicParameters();
-
-        if (startDate.HasValue)
-        {
-            where.Add("tr.started_at >= @StartDate");
-            p.Add("StartDate", startDate.Value);
-        }
-        if (endDate.HasValue)
-        {
-            where.Add("tr.started_at <= @EndDate");
-            p.Add("EndDate", endDate.Value);
-        }
-        if (userId.HasValue)
-        {
-            where.Add("tr.user_id = @UserId");
-            p.Add("UserId", userId.Value);
-        }
-        if (testId.HasValue)
-        {
-            where.Add("tr.test_id = @TestId");
-            p.Add("TestId", testId.Value);
-        }
-
-        var whereClause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : string.Empty;
+        var (whereClause, p) = BuildReportFilter(startDate, endDate, testId, userId);
+        var fullWhere = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
 
         var rows = (await connection.QueryAsync<TestResultSummaryDto>(
             $@"SELECT
-                   tr.id         AS Id,
-                   u.username    AS Username,
-                   u.email       AS Email,
+                   tr.id AS Id, u.username AS Username, u.email AS Email,
                    TRIM(BOTH ' ' FROM
-                       COALESCE(u.last_name,  '') || ' ' ||
+                       COALESCE(u.last_name, '') || ' ' ||
                        COALESCE(u.first_name, '') || ' ' ||
-                       COALESCE(u.patronymic, '')
-                   ) AS FullName,
-                   t.title       AS TestTitle,
-                   tr.started_at   AS StartedAt,
-                   tr.finished_at  AS FinishedAt,
-                   tr.score      AS Score,
-                   t.passing_score AS PassingScore,
+                       COALESCE(u.patronymic, '')) AS FullName,
+                   t.title AS TestTitle, tr.started_at AS StartedAt, tr.finished_at AS FinishedAt,
+                   tr.score AS Score, t.passing_score AS PassingScore,
                    t.time_limit_minutes AS TimeLimitMinutes,
-                   CASE
-                       WHEN tr.finished_at IS NOT NULL
-                       THEN EXTRACT(EPOCH FROM (tr.finished_at - tr.started_at))::INT
-                       ELSE NULL
-                   END AS DurationSeconds,
-                   tr.cheat_attempts AS CheatAttempts,
-                   tr.auto_submitted AS AutoSubmitted,
-                   CASE
-                       WHEN tr.finished_at IS NULL THEN 'in_progress'
-                       WHEN tr.score >= t.passing_score THEN 'passed'
-                       ELSE 'failed'
-                   END AS Status
+                   CASE WHEN tr.finished_at IS NOT NULL
+                        THEN EXTRACT(EPOCH FROM (tr.finished_at - tr.started_at))::INT
+                        ELSE NULL END AS DurationSeconds,
+                   tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
+                   CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
+                        WHEN tr.score >= t.passing_score THEN 'passed'
+                        ELSE 'failed' END AS Status
                FROM test_results tr
                JOIN users u ON tr.user_id = u.id
                JOIN tests t ON tr.test_id = t.id
-               {whereClause}
-               ORDER BY tr.started_at DESC
-               LIMIT 2000",
+               {fullWhere}
+               ORDER BY tr.started_at DESC LIMIT 2000",
             p)).ToList();
+
         foreach (var r in rows)
         {
             if (string.IsNullOrWhiteSpace(r.FullName)) r.FullName = null;
@@ -288,16 +250,12 @@ public class ReportService : IReportService
         var failed = completed.Count - passed;
         var passRate = completed.Count > 0 ? (passed * 100.0 / completed.Count) : 0.0;
         var avgDuration = completed.Where(r => r.DurationSeconds.HasValue)
-            .Select(r => r.DurationSeconds!.Value)
-            .DefaultIfEmpty(0)
-            .Average();
-        var totalCheat = rows.Sum(r => r.CheatAttempts);
+            .Select(r => r.DurationSeconds!.Value).DefaultIfEmpty(0).Average();
+
         string? testTitle = null;
         if (testId.HasValue)
-        {
             testTitle = await connection.ExecuteScalarAsync<string?>(
                 "SELECT title FROM tests WHERE id = @Id", new { Id = testId.Value });
-        }
 
         return new DetailedReportDto
         {
@@ -311,7 +269,7 @@ public class ReportService : IReportService
             CompletedResults = completed.Count,
             PassedResults = passed,
             FailedResults = failed,
-            TotalCheatAttempts = totalCheat,
+            TotalCheatAttempts = rows.Sum(r => r.CheatAttempts),
             AverageScore = Math.Round(avg, 2),
             PassRate = Math.Round(passRate, 2),
             AverageDurationSeconds = Math.Round(avgDuration, 0),
@@ -322,8 +280,7 @@ public class ReportService : IReportService
     private static string ResolveKind(DateTime? start, DateTime? end, int? testId)
     {
         bool hasTest = testId.HasValue;
-        bool isSameDay = start.HasValue && end.HasValue &&
-                         start.Value.Date == end.Value.Date;
+        bool isSameDay = start.HasValue && end.HasValue && start.Value.Date == end.Value.Date;
         bool hasPeriod = (start.HasValue || end.HasValue) && !isSameDay;
 
         if (hasTest && hasPeriod) return "test_period";
@@ -333,19 +290,25 @@ public class ReportService : IReportService
         return "all";
     }
 
+    private static (string Where, DynamicParameters Params) BuildReportFilter(
+        DateTime? from, DateTime? to, int? testId, int? userId = null)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (from.HasValue) { conditions.Add("DATE(tr.started_at) >= @From"); parameters.Add("From", from.Value.Date); }
+        if (to.HasValue) { conditions.Add("DATE(tr.started_at) <= @To"); parameters.Add("To", to.Value.Date); }
+        if (testId.HasValue) { conditions.Add("tr.test_id = @TestId"); parameters.Add("TestId", testId.Value); }
+        if (userId.HasValue) { conditions.Add("tr.user_id = @UserId"); parameters.Add("UserId", userId.Value); }
+
+        return (string.Join(" AND ", conditions), parameters);
+    }
+
     private async Task<ReportStatistics> GetStatistics(DateTime? from, DateTime? to, int? testId, int? userId)
     {
         using var connection = _db.CreateConnection();
-
-        var whereClauses = new List<string>();
-        var parameters = new DynamicParameters();
-
-        if (from.HasValue) { whereClauses.Add("DATE(tr.started_at) >= @From"); parameters.Add("From", from.Value.Date); }
-        if (to.HasValue) { whereClauses.Add("DATE(tr.started_at) <= @To"); parameters.Add("To", to.Value.Date); }
-        if (testId.HasValue) { whereClauses.Add("tr.test_id = @TestId"); parameters.Add("TestId", testId.Value); }
-        if (userId.HasValue) { whereClauses.Add("tr.user_id = @UserId"); parameters.Add("UserId", userId.Value); }
-
-        var whereClause = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
+        var (whereClause, parameters) = BuildReportFilter(from, to, testId, userId);
+        var where = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
 
         return await connection.QueryFirstAsync<ReportStatistics>(
             $@"SELECT
@@ -353,34 +316,30 @@ public class ReportService : IReportService
                 COUNT(tr.id) as TotalAttempts,
                 COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) as CompletedAttempts,
                 COALESCE(AVG(tr.score), 0) as AverageScore,
-                COUNT(CASE WHEN tr.score >= 70 THEN 1 END) as PassedCount,
-                COUNT(CASE WHEN tr.score < 70 AND tr.finished_at IS NOT NULL THEN 1 END) as FailedCount
-              FROM test_results tr {whereClause}", parameters);
+                COUNT(CASE WHEN tr.score >= t.passing_score THEN 1 END) as PassedCount,
+                COUNT(CASE WHEN tr.score < t.passing_score AND tr.finished_at IS NOT NULL THEN 1 END) as FailedCount
+              FROM test_results tr
+              JOIN tests t ON tr.test_id = t.id
+              {where}", parameters);
     }
 
     private async Task<IEnumerable<UserStatistics>> GetUserStatisticsForReport(DateTime? from, DateTime? to, int? testId)
     {
         using var connection = _db.CreateConnection();
-
-        var whereClauses = new List<string>();
-        var parameters = new DynamicParameters();
-
-        if (from.HasValue) { whereClauses.Add("DATE(tr.started_at) >= @From"); parameters.Add("From", from.Value.Date); }
-        if (to.HasValue) { whereClauses.Add("DATE(tr.started_at) <= @To"); parameters.Add("To", to.Value.Date); }
-        if (testId.HasValue) { whereClauses.Add("tr.test_id = @TestId"); parameters.Add("TestId", testId.Value); }
-
-        var whereClause = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
+        var (whereClause, parameters) = BuildReportFilter(from, to, testId);
+        var where = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
 
         return await connection.QueryAsync<UserStatistics>(
             $@"SELECT
                 u.id as UserId, u.username as Username,
                 COUNT(CASE WHEN tr.finished_at IS NOT NULL THEN 1 END) as TestsCompleted,
                 COALESCE(AVG(tr.score), 0) as AverageScore,
-                COUNT(CASE WHEN tr.score >= 70 THEN 1 END) as PassedCount,
-                COUNT(CASE WHEN tr.score < 70 AND tr.finished_at IS NOT NULL THEN 1 END) as FailedCount
+                COUNT(CASE WHEN tr.score >= t.passing_score THEN 1 END) as PassedCount,
+                COUNT(CASE WHEN tr.score < t.passing_score AND tr.finished_at IS NOT NULL THEN 1 END) as FailedCount
               FROM users u
               LEFT JOIN test_results tr ON u.id = tr.user_id
-              {whereClause}
+              LEFT JOIN tests t ON tr.test_id = t.id
+              {where}
               GROUP BY u.id, u.username
               HAVING COUNT(tr.id) > 0
               ORDER BY u.username", parameters);
@@ -392,7 +351,7 @@ public class ReportService : IReportService
         if (!string.IsNullOrEmpty(report.Content))
         {
             try { content = JsonSerializer.Deserialize<ReportContent>(report.Content); }
-            catch {  }
+            catch { }
         }
 
         return new ReportDto

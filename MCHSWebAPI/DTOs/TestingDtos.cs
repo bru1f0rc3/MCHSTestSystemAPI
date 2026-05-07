@@ -17,6 +17,7 @@ public class TestQuestionDto
     public int QuestionId { get; set; }
     public string QuestionText { get; set; } = string.Empty;
     public int Position { get; set; }
+    public bool AllowMultipleAnswers { get; set; }
     public List<TestAnswerDto> Answers { get; set; } = new();
 }
 

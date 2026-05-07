@@ -1,28 +1,37 @@
-# Visual Studio folders
-.vs/
-.vscode/
-
-# Build results
+# Build output
 bin/
 obj/
+out/
 *.dll
 *.exe
+*.pdb
 
-# User-specific files
+# Visual Studio
+.vs/
+.vscode/
 *.user
 *.userosscache
+*.suo
+*.sln.docstates
+
+# Rider / ReSharper
+.idea/
+*.DotSettings.user
 
 # NuGet
 *.nupkg
 *.snupkg
 
-# User preferences
-*.suo
-*.sln.docstates
-
-# Test Results
+# Test results
 TestResults/
+coverage.*
+*.trx
 
-# IDE
-.vscode/
-.vs/
+# Runtime artefacts
+storage/
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

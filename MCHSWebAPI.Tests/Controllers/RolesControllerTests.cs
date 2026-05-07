@@ -1,5 +1,3 @@
-﻿using MCHSWebAPI.Controllers;
-
 namespace MCHSWebAPI.Tests.Controllers;
 
 public class RolesControllerTests
@@ -22,18 +20,19 @@ public class RolesControllerTests
             new() { Id = 2, Name = "admin" }
         };
         _roleServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(roles);
+
         var result = await _controller.GetAll();
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
-        okResult!.StatusCode.Should().Be(200);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task GetAll_ReturnsEmptyList()
+    public async Task GetAll_WhenEmpty_ReturnsOk()
     {
         _roleServiceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(new List<Role>());
+
         var result = await _controller.GetAll();
-        var okResult = result.Result as OkObjectResult;
-        okResult.Should().NotBeNull();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using Dapper;
 using MCHSWebAPI.Data;
@@ -10,6 +10,19 @@ namespace MCHSWebAPI.Services.TestService.TestService;
 public class TestingService : ITestingService
 {
     private readonly IDbConnectionFactory _db;
+
+    private const string ResultSelectSql = @"
+        SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId, tr.started_at AS StartedAt,
+               tr.finished_at AS FinishedAt, tr.score,
+               tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
+               u.username AS Username, t.title AS TestTitle, l.title AS LectureTitle,
+               t.passing_score AS PassingScore, t.time_limit_minutes AS TimeLimitMinutes,
+               CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
+                    WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END AS Status
+        FROM test_results tr
+        JOIN users u ON tr.user_id = u.id
+        JOIN tests t ON tr.test_id = t.id
+        LEFT JOIN lectures l ON t.lecture_id = l.id";
 
     public TestingService(IDbConnectionFactory db)
     {
@@ -47,7 +60,7 @@ public class TestingService : ITestingService
         if (test == null) return null;
         if (IsTimedOut(result.StartedAt, test.TimeLimitMinutes))
         {
-            await AutoFinishAsync(result.Id);
+            await CalculateAndStoreScore(result.Id, autoSubmitted: true);
             return null;
         }
 
@@ -63,34 +76,28 @@ public class TestingService : ITestingService
             return false;
         if (IsTimedOut(testResult.StartedAt, testResult.TimeLimitMinutes))
         {
-            await AutoFinishAsync(testResultId);
+            await CalculateAndStoreScore(testResultId, autoSubmitted: true);
             return false;
         }
 
         var question = await connection.QueryFirstOrDefaultAsync<Question>(
-            @"SELECT id, test_id AS TestId FROM questions WHERE id = @Id",
+            "SELECT id, test_id AS TestId FROM questions WHERE id = @Id",
             new { Id = request.QuestionId });
         if (question == null || question.TestId != testResult.TestId)
             return false;
 
         var answer = await connection.QueryFirstOrDefaultAsync<Answer>(
-            @"SELECT id, question_id AS QuestionId FROM answers WHERE id = @Id",
+            "SELECT id, question_id AS QuestionId FROM answers WHERE id = @Id",
             new { Id = request.AnswerId });
         if (answer == null || answer.QuestionId != request.QuestionId)
             return false;
 
-        var existingAnswer = await connection.QueryFirstOrDefaultAsync<UserAnswer>(
-            @"SELECT id FROM user_answers
-              WHERE test_result_id = @TestResultId AND question_id = @QuestionId",
-            new { TestResultId = testResultId, QuestionId = request.QuestionId });
+        var exists = await connection.ExecuteScalarAsync<bool>(
+            @"SELECT EXISTS(SELECT 1 FROM user_answers
+              WHERE test_result_id = @TestResultId AND question_id = @QuestionId AND answer_id = @AnswerId)",
+            new { TestResultId = testResultId, QuestionId = request.QuestionId, AnswerId = request.AnswerId });
 
-        if (existingAnswer != null)
-        {
-            await connection.ExecuteAsync(
-                "UPDATE user_answers SET answer_id = @AnswerId, answered_at = @AnsweredAt WHERE id = @Id",
-                new { AnswerId = request.AnswerId, AnsweredAt = DateTime.UtcNow, Id = existingAnswer.Id });
-        }
-        else
+        if (!exists)
         {
             await connection.ExecuteAsync(
                 @"INSERT INTO user_answers (test_result_id, question_id, answer_id, answered_at)
@@ -104,11 +111,47 @@ public class TestingService : ITestingService
 
     public async Task<bool> SubmitAnswersAsync(int testResultId, int userId, SubmitAnswersRequest request)
     {
-        foreach (var a in request.Answers)
+        using var connection = _db.CreateConnection();
+
+        var testResult = await LoadResultForSubmit(connection, testResultId);
+        if (testResult == null || testResult.UserId != userId || testResult.FinishedAt.HasValue)
+            return false;
+        if (IsTimedOut(testResult.StartedAt, testResult.TimeLimitMinutes))
         {
-            if (!await SubmitAnswerAsync(testResultId, userId, a))
-                return false;
+            await CalculateAndStoreScore(testResultId, autoSubmitted: true);
+            return false;
         }
+
+        var validAnswers = (await connection.QueryAsync<(int QuestionId, int AnswerId)>(
+            @"SELECT q.id AS QuestionId, a.id AS AnswerId
+              FROM questions q JOIN answers a ON a.question_id = q.id
+              WHERE q.test_id = @TestId",
+            new { testResult.TestId })).ToLookup(x => x.QuestionId, x => x.AnswerId);
+
+        foreach (var group in request.Answers.GroupBy(a => a.QuestionId))
+        {
+            var questionId = group.Key;
+            if (!validAnswers.Contains(questionId))
+                return false;
+
+            var validIds = validAnswers[questionId].ToHashSet();
+            if (group.Any(a => !validIds.Contains(a.AnswerId)))
+                return false;
+
+            await connection.ExecuteAsync(
+                "DELETE FROM user_answers WHERE test_result_id = @TestResultId AND question_id = @QuestionId",
+                new { TestResultId = testResultId, QuestionId = questionId });
+
+            foreach (var a in group)
+            {
+                await connection.ExecuteAsync(
+                    @"INSERT INTO user_answers (test_result_id, question_id, answer_id, answered_at)
+                      VALUES (@TestResultId, @QuestionId, @AnswerId, @AnsweredAt)",
+                    new { TestResultId = testResultId, QuestionId = questionId,
+                          AnswerId = a.AnswerId, AnsweredAt = DateTime.UtcNow });
+            }
+        }
+
         return true;
     }
 
@@ -144,19 +187,10 @@ public class TestingService : ITestingService
             return null;
 
         using var connection = _db.CreateConnection();
-
-        var userAnswers = (await connection.QueryAsync<UserAnswer>(
-            @"SELECT ua.id, ua.test_result_id AS TestResultId, ua.question_id AS QuestionId,
-                     ua.answer_id AS AnswerId, ua.answered_at AS AnsweredAt,
-                     q.question_text AS QuestionText, a.answer_text AS AnswerText, a.is_correct AS IsCorrect
-              FROM user_answers ua
-              JOIN questions q ON ua.question_id = q.id
-              LEFT JOIN answers a ON ua.answer_id = a.id
-              WHERE ua.test_result_id = @TestResultId ORDER BY q.position",
-            new { TestResultId = testResultId })).ToList();
-
-        var questionIds = userAnswers.Select(ua => ua.QuestionId).ToList();
+        var userAnswers = await GetUserAnswersForResult(connection, testResultId);
+        var questionIds = userAnswers.Select(ua => ua.QuestionId).Distinct().ToList();
         var correctAnswersMap = await GetCorrectAnswersMap(questionIds);
+        var (_, questionResults) = EvaluateQuestionResults(userAnswers, correctAnswersMap);
 
         return new TestResultDetailDto
         {
@@ -173,14 +207,7 @@ public class TestingService : ITestingService
             AutoSubmitted = testResult.AutoSubmitted,
             Status = testResult.Status ?? "unknown",
             Username = testResult.Username,
-            QuestionResults = userAnswers.Select(ua => new QuestionResultDto
-            {
-                QuestionId = ua.QuestionId,
-                QuestionText = ua.QuestionText ?? "",
-                UserAnswer = ua.AnswerText,
-                CorrectAnswer = FormatCorrectAnswers(correctAnswersMap, ua.QuestionId),
-                IsCorrect = ua.IsCorrect ?? false
-            }).ToList()
+            QuestionResults = questionResults
         };
     }
 
@@ -193,20 +220,10 @@ public class TestingService : ITestingService
             new { UserId = userId });
 
         var results = await connection.QueryAsync<TestResult>(
-            @"SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId, tr.started_at AS StartedAt,
-                     tr.finished_at AS FinishedAt, tr.score,
-                     tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
-                     u.username AS Username, t.title AS TestTitle, l.title AS LectureTitle,
-                     t.passing_score AS PassingScore,
-                     CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
-                          WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END AS Status
-              FROM test_results tr
-              JOIN users u ON tr.user_id = u.id
-              JOIN tests t ON tr.test_id = t.id
-              LEFT JOIN lectures l ON t.lecture_id = l.id
-              WHERE tr.user_id = @UserId
-              ORDER BY tr.started_at DESC
-              LIMIT @PageSize OFFSET @Offset",
+            $@"{ResultSelectSql}
+               WHERE tr.user_id = @UserId
+               ORDER BY tr.started_at DESC
+               LIMIT @PageSize OFFSET @Offset",
             new { UserId = userId, PageSize = pageSize, Offset = (page - 1) * pageSize });
 
         return new PagedResponse<TestResultDto>
@@ -235,17 +252,7 @@ public class TestingService : ITestingService
             parameters);
 
         var results = await connection.QueryAsync<TestResult>(
-            $@"SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId, tr.started_at AS StartedAt,
-                      tr.finished_at AS FinishedAt, tr.score,
-                      tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
-                      u.username AS Username, t.title AS TestTitle, l.title AS LectureTitle,
-                      t.passing_score AS PassingScore,
-                      CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
-                           WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END AS Status
-               FROM test_results tr
-               JOIN users u ON tr.user_id = u.id
-               JOIN tests t ON tr.test_id = t.id
-               LEFT JOIN lectures l ON t.lecture_id = l.id
+            $@"{ResultSelectSql}
                WHERE {whereClause}
                ORDER BY tr.started_at DESC
                LIMIT @PageSize OFFSET @Offset",
@@ -264,8 +271,7 @@ public class TestingService : ITestingService
     {
         using var connection = _db.CreateConnection();
         var testResult = await connection.QueryFirstOrDefaultAsync<TestResult>(
-            @"SELECT id, user_id AS UserId, finished_at AS FinishedAt
-              FROM test_results WHERE id = @Id",
+            "SELECT id, user_id AS UserId, finished_at AS FinishedAt FROM test_results WHERE id = @Id",
             new { Id = testResultId });
 
         if (testResult == null || testResult.UserId != userId || testResult.FinishedAt.HasValue)
@@ -310,17 +316,7 @@ public class TestingService : ITestingService
         }
 
         var results = await connection.QueryAsync<TestResult>(
-            $@"SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId, tr.started_at AS StartedAt,
-                      tr.finished_at AS FinishedAt, tr.score,
-                      tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
-                      u.username AS Username, t.title AS TestTitle, l.title AS LectureTitle,
-                      t.passing_score AS PassingScore,
-                      CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
-                           WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END AS Status
-               FROM test_results tr
-               JOIN users u ON tr.user_id = u.id
-               JOIN tests t ON tr.test_id = t.id
-               LEFT JOIN lectures l ON t.lecture_id = l.id
+            $@"{ResultSelectSql}
                WHERE {whereClause}
                ORDER BY tr.started_at DESC",
             parameters);
@@ -350,13 +346,7 @@ public class TestingService : ITestingService
     private static bool IsTimedOut(DateTime startedAt, int? timeLimitMinutes)
     {
         if (!timeLimitMinutes.HasValue || timeLimitMinutes.Value <= 0) return false;
-        var deadline = startedAt.AddMinutes(timeLimitMinutes.Value);
-        return DateTime.UtcNow > deadline.AddSeconds(3);
-    }
-
-    private async Task AutoFinishAsync(int testResultId)
-    {
-        await CalculateAndStoreScore(testResultId, autoSubmitted: true);
+        return DateTime.UtcNow > startedAt.AddMinutes(timeLimitMinutes.Value).AddSeconds(3);
     }
 
     private async Task CalculateAndStoreScore(int testResultId, bool autoSubmitted)
@@ -364,8 +354,7 @@ public class TestingService : ITestingService
         using var connection = _db.CreateConnection();
 
         var testResult = await connection.QueryFirstOrDefaultAsync<TestResult>(
-            @"SELECT id, user_id AS UserId, test_id AS TestId, started_at AS StartedAt,
-                     finished_at AS FinishedAt
+            @"SELECT id, test_id AS TestId, finished_at AS FinishedAt
               FROM test_results WHERE id = @Id",
             new { Id = testResultId });
         if (testResult == null || testResult.FinishedAt.HasValue) return;
@@ -374,14 +363,13 @@ public class TestingService : ITestingService
             "SELECT COUNT(*) FROM questions WHERE test_id = @TestId",
             new { testResult.TestId });
 
-        var correctAnswers = await connection.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(*) FROM user_answers ua
-              JOIN answers a ON ua.answer_id = a.id
-              WHERE ua.test_result_id = @TestResultId AND a.is_correct = true",
-            new { TestResultId = testResultId });
+        var userAnswers = await GetUserAnswersForResult(connection, testResultId);
+        var questionIds = userAnswers.Select(ua => ua.QuestionId).Distinct().ToList();
+        var correctAnswersMap = await GetCorrectAnswersMap(questionIds);
+        var (correctCount, _) = EvaluateQuestionResults(userAnswers, correctAnswersMap);
 
         var score = totalQuestions > 0
-            ? Math.Round((double)correctAnswers / totalQuestions * 100, 2)
+            ? Math.Round((double)correctCount / totalQuestions * 100, 2)
             : 0;
 
         await connection.ExecuteAsync(
@@ -460,19 +448,7 @@ public class TestingService : ITestingService
     {
         using var connection = _db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<TestResult>(
-            @"SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId,
-                     tr.started_at AS StartedAt, tr.finished_at AS FinishedAt, tr.score,
-                     tr.cheat_attempts AS CheatAttempts, tr.auto_submitted AS AutoSubmitted,
-                     u.username AS Username, t.title AS TestTitle, l.title AS LectureTitle,
-                     t.time_limit_minutes AS TimeLimitMinutes,
-                     t.passing_score AS PassingScore,
-                     CASE WHEN tr.finished_at IS NULL THEN 'in_progress'
-                          WHEN tr.score >= t.passing_score THEN 'passed' ELSE 'failed' END AS Status
-              FROM test_results tr
-              JOIN users u ON tr.user_id = u.id
-              JOIN tests t ON tr.test_id = t.id
-              LEFT JOIN lectures l ON t.lecture_id = l.id
-              WHERE tr.id = @Id",
+            $"{ResultSelectSql} WHERE tr.id = @Id",
             new { Id = testResultId });
     }
 
@@ -499,21 +475,9 @@ public class TestingService : ITestingService
         return string.Join(", ", answers.Select(a => a.AnswerText));
     }
 
-    private async Task<FinishTestResponse> BuildFinishResponse(int testResultId, TestResult testResult)
+    private async Task<List<UserAnswer>> GetUserAnswersForResult(System.Data.IDbConnection connection, int testResultId)
     {
-        using var connection = _db.CreateConnection();
-
-        var totalQuestions = await connection.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM questions WHERE test_id = @TestId",
-            new { testResult.TestId });
-
-        var correctAnswers = await connection.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(*) FROM user_answers ua
-              JOIN answers a ON ua.answer_id = a.id
-              WHERE ua.test_result_id = @TestResultId AND a.is_correct = true",
-            new { TestResultId = testResultId });
-
-        var userAnswers = (await connection.QueryAsync<UserAnswer>(
+        return (await connection.QueryAsync<UserAnswer>(
             @"SELECT ua.id, ua.test_result_id AS TestResultId, ua.question_id AS QuestionId,
                      ua.answer_id AS AnswerId, ua.answered_at AS AnsweredAt,
                      q.question_text AS QuestionText, a.answer_text AS AnswerText, a.is_correct AS IsCorrect
@@ -522,10 +486,51 @@ public class TestingService : ITestingService
               LEFT JOIN answers a ON ua.answer_id = a.id
               WHERE ua.test_result_id = @TestResultId ORDER BY q.position",
             new { TestResultId = testResultId })).ToList();
+    }
 
-        var questionIds = userAnswers.Select(ua => ua.QuestionId).ToList();
+    private static (int CorrectCount, List<QuestionResultDto> Results) EvaluateQuestionResults(
+        List<UserAnswer> userAnswers,
+        Dictionary<int, List<Answer>> correctAnswersMap)
+    {
+        var results = new List<QuestionResultDto>();
+        int correctCount = 0;
+
+        foreach (var group in userAnswers.GroupBy(ua => ua.QuestionId))
+        {
+            var qId = group.Key;
+            var correctIds = correctAnswersMap.TryGetValue(qId, out var list)
+                ? list.Select(a => a.Id).ToHashSet()
+                : new HashSet<int>();
+            var userIds = group.Select(ua => ua.AnswerId ?? 0).Where(id => id > 0).ToHashSet();
+            var isCorrect = correctIds.SetEquals(userIds);
+            if (isCorrect) correctCount++;
+
+            results.Add(new QuestionResultDto
+            {
+                QuestionId = qId,
+                QuestionText = group.First().QuestionText ?? "",
+                UserAnswer = string.Join(", ", group.Select(ua => ua.AnswerText).Where(t => t != null)),
+                CorrectAnswer = FormatCorrectAnswers(correctAnswersMap, qId),
+                IsCorrect = isCorrect
+            });
+        }
+
+        return (correctCount, results);
+    }
+
+    private async Task<FinishTestResponse> BuildFinishResponse(int testResultId, TestResult testResult)
+    {
+        using var connection = _db.CreateConnection();
+
+        var totalQuestions = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM questions WHERE test_id = @TestId",
+            new { testResult.TestId });
+
+        var userAnswers = await GetUserAnswersForResult(connection, testResultId);
+        var questionIds = userAnswers.Select(ua => ua.QuestionId).Distinct().ToList();
         var correctAnswersMap = await GetCorrectAnswersMap(questionIds);
         var passingScore = testResult.PassingScore ?? 70;
+        var (correctCount, questionResults) = EvaluateQuestionResults(userAnswers, correctAnswersMap);
 
         return new FinishTestResponse
         {
@@ -537,26 +542,15 @@ public class TestingService : ITestingService
             PassingScore = passingScore,
             Status = (testResult.Score ?? 0) >= passingScore ? "passed" : "failed",
             TotalQuestions = totalQuestions,
-            CorrectAnswers = correctAnswers,
+            CorrectAnswers = correctCount,
             CheatAttempts = testResult.CheatAttempts,
             AutoSubmitted = testResult.AutoSubmitted,
-            QuestionResults = userAnswers.Select(ua => new QuestionResultDto
-            {
-                QuestionId = ua.QuestionId,
-                QuestionText = ua.QuestionText ?? "",
-                UserAnswer = ua.AnswerText,
-                CorrectAnswer = FormatCorrectAnswers(correctAnswersMap, ua.QuestionId),
-                IsCorrect = ua.IsCorrect ?? false
-            }).ToList()
+            QuestionResults = questionResults
         };
     }
 
     private static StartTestResponse BuildStartResponse(int testResultId, Test test, DateTime startedAt)
     {
-        DateTime? deadline = test.TimeLimitMinutes.HasValue
-            ? startedAt.AddMinutes(test.TimeLimitMinutes.Value)
-            : null;
-
         return new StartTestResponse
         {
             TestResultId = testResultId,
@@ -564,7 +558,7 @@ public class TestingService : ITestingService
             TestTitle = test.Title,
             StartedAt = startedAt,
             TimeLimitMinutes = test.TimeLimitMinutes,
-            DeadlineAt = deadline,
+            DeadlineAt = test.TimeLimitMinutes.HasValue ? startedAt.AddMinutes(test.TimeLimitMinutes.Value) : null,
             PassingScore = test.PassingScore,
             Questions = MapQuestions(test.Questions)
         };
@@ -577,6 +571,7 @@ public class TestingService : ITestingService
             QuestionId = q.Id,
             QuestionText = q.QuestionText,
             Position = q.Position,
+            AllowMultipleAnswers = q.Answers?.Count(a => a.IsCorrect) > 1,
             Answers = q.Answers?.Select(a => new TestAnswerDto
             {
                 AnswerId = a.Id,
@@ -617,8 +612,7 @@ public class TestingService : ITestingService
         if (endDate.HasValue)
         {
             conditions.Add("tr.started_at <= @EndDate");
-            var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
-            parameters.Add("EndDate", endOfDay.ToUniversalTime());
+            parameters.Add("EndDate", endDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime());
         }
 
         if (!string.IsNullOrWhiteSpace(searchQuery))
