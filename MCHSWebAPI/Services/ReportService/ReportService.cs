@@ -1,29 +1,23 @@
 using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 using System.Text.Json;
 
-namespace MCHSWebAPI.Services.ReportService.ReportService;
+namespace MCHSWebAPI.Services.ReportService;
 
-public class ReportService : IReportService
+public class ReportService(IDbConnectionFactory db) : IReportService
 {
-    private readonly IDbConnectionFactory _db;
-
     private const string ReportSelectSql = @"
         SELECT r.id, r.created_by as CreatedBy, r.report_date as ReportDate,
                r.content::text as Content, r.created_at as CreatedAt,
                u.username as CreatorUsername
         FROM reports r JOIN users u ON r.created_by = u.id";
 
-    public ReportService(IDbConnectionFactory db)
-    {
-        _db = db;
-    }
-
     public async Task<ReportDto?> GetByIdAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var report = await connection.QueryFirstOrDefaultAsync<Report>(
             $"{ReportSelectSql} WHERE r.id = @Id", new { Id = id });
         return report == null ? null : MapToDto(report);
@@ -31,7 +25,7 @@ public class ReportService : IReportService
 
     public async Task<PagedResponse<ReportDto>> GetAllAsync(int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var totalCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM reports");
 
         var reports = await connection.QueryAsync<Report>(
@@ -51,7 +45,7 @@ public class ReportService : IReportService
 
     public async Task<ReportDto?> CreateAsync(CreateReportRequest request, int createdBy)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var statistics = await GetStatistics(request.DateFrom, request.DateTo, request.TestId, request.UserId);
         var userStatistics = await GetUserStatisticsForReport(request.DateFrom, request.DateTo, request.TestId);
 
@@ -79,13 +73,13 @@ public class ReportService : IReportService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM reports WHERE id = @Id", new { Id = id }) > 0;
     }
 
     public async Task<DashboardDto> GetDashboardAsync()
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var dashboard = new DashboardDto
         {
@@ -123,7 +117,7 @@ public class ReportService : IReportService
 
     public async Task<IEnumerable<TestStatisticsDto>> GetTestStatisticsAsync()
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryAsync<TestStatisticsDto>(
             @"SELECT
                 t.id as TestId, t.title as TestTitle,
@@ -146,7 +140,7 @@ public class ReportService : IReportService
 
     public async Task<UserStatisticsDto?> GetUserStatisticsAsync(int userId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<UserStatisticsDto>(
             @"SELECT
                 u.id as UserId, u.username as Username,
@@ -171,7 +165,7 @@ public class ReportService : IReportService
 
     public async Task<PagedResponse<UserPerformanceDto>> GetUsersPerformanceAsync(int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var totalCount = await connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(DISTINCT u.id) FROM users u INNER JOIN test_results tr ON u.id = tr.user_id");
@@ -209,7 +203,7 @@ public class ReportService : IReportService
     public async Task<DetailedReportDto> GetDetailedReportAsync(
         DateTime? startDate, DateTime? endDate, int? userId, int? testId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var (whereClause, p) = BuildReportFilter(startDate, endDate, testId, userId);
         var fullWhere = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
@@ -306,7 +300,7 @@ public class ReportService : IReportService
 
     private async Task<ReportStatistics> GetStatistics(DateTime? from, DateTime? to, int? testId, int? userId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var (whereClause, parameters) = BuildReportFilter(from, to, testId, userId);
         var where = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
 
@@ -325,7 +319,7 @@ public class ReportService : IReportService
 
     private async Task<IEnumerable<UserStatistics>> GetUserStatisticsForReport(DateTime? from, DateTime? to, int? testId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var (whereClause, parameters) = BuildReportFilter(from, to, testId);
         var where = whereClause.Length > 0 ? $"WHERE {whereClause}" : "";
 

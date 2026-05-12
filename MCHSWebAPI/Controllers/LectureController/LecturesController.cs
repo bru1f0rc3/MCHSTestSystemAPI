@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using MCHSWebAPI.Services.LectureService.LectureService;
+using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.LectureController;
 

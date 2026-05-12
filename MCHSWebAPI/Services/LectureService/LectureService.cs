@@ -1,22 +1,16 @@
 ﻿using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.LectureService.LectureService;
+namespace MCHSWebAPI.Services.LectureService;
 
-public class LectureService : ILectureService
+public class LectureService(IDbConnectionFactory db) : ILectureService
 {
-    private readonly IDbConnectionFactory _db;
-
-    public LectureService(IDbConnectionFactory db)
-    {
-        _db = db;
-    }
-
     public async Task<LectureDto?> GetByIdAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         const string sql = @"
             SELECT l.id, l.title, l.text_content as TextContent, l.path_id as PathId, l.created_at as CreatedAt,
                    p.id, p.video_path as VideoPath, p.document_path as DocumentPath
@@ -46,7 +40,7 @@ public class LectureService : ILectureService
 
     public async Task<PagedResponse<LectureListDto>> GetAllAsync(int page, int pageSize, string? search = null)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var buildWhere = "";
         var queryParams = new DynamicParameters();
@@ -94,7 +88,7 @@ public class LectureService : ILectureService
 
     public async Task<LectureDto?> CreateAsync(CreateLectureRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
 
@@ -125,7 +119,7 @@ public class LectureService : ILectureService
 
     public async Task<bool> UpdateAsync(int id, UpdateLectureRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
 
@@ -174,7 +168,7 @@ public class LectureService : ILectureService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
 

@@ -4,32 +4,25 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Dapper;
 using MCHSWebAPI.Data;
-using MCHSWebAPI.Helpers;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 using MCHSWebAPI.DTOs;
-using MCHSWebAPI.Services.VerificationService;
 
-namespace MCHSWebAPI.Services.AuthService.AuthService;
+namespace MCHSWebAPI.Services.AuthService;
 
-public class AuthService : IAuthService
+public class AuthService(IDbConnectionFactory db, IConfiguration config) : IAuthService
 {
-    private readonly IDbConnectionFactory _db;
-    private readonly IConfiguration _config;
-    private readonly IVerificationService _verification;
-
-    public AuthService(IDbConnectionFactory db, IConfiguration config, IVerificationService verification)
-    {
-        _db = db;
-        _config = config;
-        _verification = verification;
-    }
+    private const string UserSelectColumns =
+        @"u.id, u.username, u.password_hash as PasswordHash, u.role_id as RoleId,
+          u.device_id as DeviceId, u.email,
+          u.last_name  as LastName,
+          u.first_name as FirstName,
+          u.patronymic as Patronymic,
+          u.created_at as CreatedAt, r.name as RoleName";
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request)
     {
-        var key = request.Username.Trim();
-        var user = key.Contains('@')
-            ? await GetUserByEmailAsync(key)
-            : await GetUserByUsernameAsync(key);
+        var user = await GetUserByUsernameAsync(request.Username.Trim());
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return null;
 
@@ -38,9 +31,6 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse?> RegisterAsync(RegisterRequest request)
     {
-        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-        if (!await _verification.VerifyCodeAsync(normalizedEmail, request.VerificationCode, "registration"))
-            return null;
         if (!string.IsNullOrEmpty(request.DeviceId))
         {
             var userByDevice = await GetUserByDeviceIdAsync(request.DeviceId);
@@ -48,15 +38,13 @@ public class AuthService : IAuthService
             {
                 if (await UserExistsAsync(request.Username))
                     return null;
-                if (await EmailInUseByAnotherAsync(normalizedEmail, userByDevice.Id))
-                    return null;
 
                 var userRole = await GetRoleByNameAsync("user");
                 if (userRole == null) return null;
 
                 var hash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                await UpdateGuestToRegisteredAsync(
-                    userByDevice.Id, request.Username, hash, normalizedEmail, userRole.Id,
+                await UpgradeGuestAsync(
+                    userByDevice.Id, request.Username, hash, userRole.Id,
                     request.LastName, request.FirstName, request.Patronymic);
 
                 var updated = await GetUserByIdAsync(userByDevice.Id);
@@ -64,13 +52,11 @@ public class AuthService : IAuthService
             }
             if (userByDevice != null && userByDevice.RoleName != "guest")
                 throw new InvalidOperationException(
-                    "Здравствуйте, у вас уже существует аккаунт на этом устройстве. " +
-                    "Зайдите в него. Если хотите создать новый аккаунт, удалите предыдущий аккаунт.");
+                    "На этом устройстве уже есть аккаунт. " +
+                    "Войдите в него или удалите его, чтобы создать новый.");
         }
 
         if (await UserExistsAsync(request.Username))
-            return null;
-        if (await EmailInUseByAnotherAsync(normalizedEmail))
             return null;
 
         var role = await GetRoleByNameAsync("user");
@@ -82,11 +68,9 @@ public class AuthService : IAuthService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             RoleId = role.Id,
             DeviceId = request.DeviceId,
-            Email = normalizedEmail,
-            EmailVerified = true,
-            LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName!.Trim(),
-            FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName!.Trim(),
-            Patronymic = string.IsNullOrWhiteSpace(request.Patronymic) ? null : request.Patronymic!.Trim()
+            LastName = NullIfBlank(request.LastName),
+            FirstName = NullIfBlank(request.FirstName),
+            Patronymic = NullIfBlank(request.Patronymic)
         };
 
         user.Id = await CreateUserAsync(user);
@@ -97,14 +81,12 @@ public class AuthService : IAuthService
 
     public async Task<GuestStatusResponse> GetGuestStatusAsync(string deviceId)
     {
-        var noAccount = new GuestStatusResponse { HasExistingAccount = false, IsGuestAccount = false };
-
         if (string.IsNullOrWhiteSpace(deviceId))
-            return noAccount;
+            return new GuestStatusResponse();
 
         var user = await GetUserByDeviceIdAsync(deviceId);
         if (user == null)
-            return noAccount;
+            return new GuestStatusResponse();
 
         return new GuestStatusResponse
         {
@@ -145,13 +127,11 @@ public class AuthService : IAuthService
         var user = await GetUserByIdAsync(userId);
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
             return false;
-        if (string.IsNullOrWhiteSpace(user.Email))
-            return false;
-        if (!await _verification.VerifyCodeAsync(user.Email.Trim().ToLowerInvariant(), request.VerificationCode, "password_change"))
-            return false;
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            throw new InvalidOperationException("Новый пароль совпадает со старым");
 
         var newHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var affected = await connection.ExecuteAsync(
             "UPDATE users SET password_hash = @Hash WHERE id = @Id",
             new { Hash = newHash, Id = userId });
@@ -169,7 +149,6 @@ public class AuthService : IAuthService
             Username = user.Username,
             Role = user.RoleName ?? "guest",
             Email = user.Email,
-            EmailVerified = user.EmailVerified,
             LastName = user.LastName,
             FirstName = user.FirstName,
             Patronymic = user.Patronymic,
@@ -179,7 +158,7 @@ public class AuthService : IAuthService
 
     public async Task<UserProfileResponse?> UpdateProfileAsync(int userId, UpdateProfileRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         await connection.ExecuteAsync(
             @"UPDATE users
               SET last_name  = @LastName,
@@ -189,65 +168,16 @@ public class AuthService : IAuthService
             new
             {
                 Id = userId,
-                LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName!.Trim(),
-                FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName!.Trim(),
-                Patronymic = string.IsNullOrWhiteSpace(request.Patronymic) ? null : request.Patronymic!.Trim()
+                LastName = NullIfBlank(request.LastName),
+                FirstName = NullIfBlank(request.FirstName),
+                Patronymic = NullIfBlank(request.Patronymic)
             });
         return await GetProfileAsync(userId);
     }
 
-    public async Task<string?> RequestPasswordResetCodeAsync(string loginOrEmail)
+    public async Task<bool> DeleteCurrentUserAsync(int userId)
     {
-        var user = await GetUserByLoginOrEmailAsync(loginOrEmail);
-        if (user == null || string.IsNullOrWhiteSpace(user.Email))
-            return null;
-
-        var email = user.Email.Trim().ToLowerInvariant();
-        var sent = await _verification.SendCodeAsync(email, "password_reset");
-        return sent ? EmailHelper.MaskEmail(email) : null;
-    }
-
-    public async Task<bool> ConfirmPasswordResetAsync(string loginOrEmail, string code, string newPassword)
-    {
-        var user = await GetUserByLoginOrEmailAsync(loginOrEmail);
-        if (user == null || string.IsNullOrWhiteSpace(user.Email))
-            return false;
-
-        var email = user.Email.Trim().ToLowerInvariant();
-        return await _verification.ResetPasswordAsync(email, code, newPassword);
-    }
-
-    public async Task<string?> SendChangePasswordCodeAsync(int userId)
-    {
-        var user = await GetUserByIdAsync(userId);
-        if (user == null || string.IsNullOrWhiteSpace(user.Email))
-            return null;
-        var email = user.Email.Trim().ToLowerInvariant();
-        var sent = await _verification.SendCodeAsync(email, "password_change");
-        return sent ? EmailHelper.MaskEmail(email) : null;
-    }
-
-    public async Task<string?> SendDeleteAccountCodeAsync(int userId)
-    {
-        var user = await GetUserByIdAsync(userId);
-        if (user == null || string.IsNullOrWhiteSpace(user.Email))
-            return null;
-        var email = user.Email.Trim().ToLowerInvariant();
-        var sent = await _verification.SendCodeAsync(email, "account_delete");
-        return sent ? EmailHelper.MaskEmail(email) : null;
-    }
-
-    public async Task<bool> DeleteCurrentUserAsync(int userId, string code)
-    {
-        var user = await GetUserByIdAsync(userId);
-        if (user == null || string.IsNullOrWhiteSpace(user.Email))
-            return false;
-
-        var email = user.Email.Trim().ToLowerInvariant();
-        var verified = await _verification.VerifyCodeAsync(email, code, "account_delete");
-        if (!verified) return false;
-
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var affected = await connection.ExecuteAsync(
             "DELETE FROM users WHERE id = @Id", new { Id = userId });
         return affected > 0;
@@ -255,8 +185,7 @@ public class AuthService : IAuthService
 
     public string GenerateToken(User user)
     {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
 
         var claims = new[]
         {
@@ -266,10 +195,10 @@ public class AuthService : IAuthService
         };
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: config["Jwt:Issuer"],
+            audience: config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(_config.GetValue<int>("Jwt:ExpirationHours", 24)),
+            expires: DateTime.UtcNow.AddHours(config.GetValue<int>("Jwt:ExpirationHours", 24)),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -277,7 +206,7 @@ public class AuthService : IAuthService
 
     private AuthResponse CreateAuthResponse(User user)
     {
-        var hours = _config.GetValue<int>("Jwt:ExpirationHours", 24);
+        var hours = config.GetValue<int>("Jwt:ExpirationHours", 24);
         return new AuthResponse
         {
             UserId = user.Id,
@@ -288,20 +217,12 @@ public class AuthService : IAuthService
         };
     }
 
-    private const string UserSelectColumns =
-        @"u.id, u.username, u.password_hash as PasswordHash, u.role_id as RoleId,
-          u.device_id as DeviceId, u.email,
-          u.email_verified as EmailVerified,
-          u.pending_email as PendingEmail,
-          u.pending_email_verified as PendingEmailVerified,
-          u.last_name  as LastName,
-          u.first_name as FirstName,
-          u.patronymic as Patronymic,
-          u.created_at as CreatedAt, r.name as RoleName";
+    private static string? NullIfBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async Task<User?> GetUserByIdAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<User>(
             $@"SELECT {UserSelectColumns}
                FROM users u JOIN roles r ON u.role_id = r.id
@@ -310,37 +231,16 @@ public class AuthService : IAuthService
 
     private async Task<User?> GetUserByUsernameAsync(string username)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<User>(
             $@"SELECT {UserSelectColumns}
                FROM users u JOIN roles r ON u.role_id = r.id
                WHERE u.username = @Username", new { Username = username });
     }
 
-    private async Task<User?> GetUserByEmailAsync(string email)
-    {
-        using var connection = _db.CreateConnection();
-        return await connection.QueryFirstOrDefaultAsync<User>(
-            $@"SELECT {UserSelectColumns}
-               FROM users u JOIN roles r ON u.role_id = r.id
-               WHERE lower(u.email) = lower(@Email)",
-            new { Email = email });
-    }
-
-    private async Task<User?> GetUserByLoginOrEmailAsync(string loginOrEmail)
-    {
-        if (string.IsNullOrWhiteSpace(loginOrEmail)) return null;
-        var key = loginOrEmail.Trim();
-        if (key.Contains('@'))
-        {
-            return await GetUserByEmailAsync(key);
-        }
-        return await GetUserByUsernameAsync(key);
-    }
-
     private async Task<User?> GetUserByDeviceIdAsync(string deviceId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<User>(
             $@"SELECT {UserSelectColumns}
                FROM users u JOIN roles r ON u.role_id = r.id
@@ -349,46 +249,31 @@ public class AuthService : IAuthService
 
     private async Task<bool> UserExistsAsync(string username)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM users WHERE username = @Username)",
             new { Username = username });
     }
 
-    private async Task<bool> EmailInUseByAnotherAsync(string email, int? excludeUserId = null)
-    {
-        using var connection = _db.CreateConnection();
-        return await connection.ExecuteScalarAsync<bool>(
-            @"SELECT EXISTS(
-                SELECT 1 FROM users
-                WHERE lower(email) = lower(@Email)
-                  AND (@ExcludeUserId IS NULL OR id <> @ExcludeUserId)
-            )",
-            new { Email = email, ExcludeUserId = excludeUserId });
-    }
-
     private async Task<int> CreateUserAsync(User user)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteScalarAsync<int>(
             @"INSERT INTO users (username, password_hash, role_id, device_id, email,
-                                  email_verified, pending_email, pending_email_verified,
                                   last_name, first_name, patronymic)
               VALUES (@Username, @PasswordHash, @RoleId, @DeviceId, @Email,
-                      @EmailVerified, @PendingEmail, @PendingEmailVerified,
                       @LastName, @FirstName, @Patronymic)
               RETURNING id", user);
     }
 
-    private async Task UpdateGuestToRegisteredAsync(
-        int userId, string username, string passwordHash, string? email, int newRoleId,
+    private async Task UpgradeGuestAsync(
+        int userId, string username, string passwordHash, int newRoleId,
         string? lastName, string? firstName, string? patronymic)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         await connection.ExecuteAsync(
             @"UPDATE users SET username = @Username, password_hash = @PasswordHash,
-                               email = @Email, email_verified = TRUE, role_id = @NewRoleId,
-                               pending_email = NULL, pending_email_verified = FALSE,
+                               role_id = @NewRoleId,
                                last_name  = COALESCE(@LastName,  last_name),
                                first_name = COALESCE(@FirstName, first_name),
                                patronymic = COALESCE(@Patronymic, patronymic)
@@ -398,19 +283,17 @@ public class AuthService : IAuthService
                 UserId = userId,
                 Username = username,
                 PasswordHash = passwordHash,
-                Email = email,
                 NewRoleId = newRoleId,
-                LastName = string.IsNullOrWhiteSpace(lastName) ? null : lastName!.Trim(),
-                FirstName = string.IsNullOrWhiteSpace(firstName) ? null : firstName!.Trim(),
-                Patronymic = string.IsNullOrWhiteSpace(patronymic) ? null : patronymic!.Trim()
+                LastName = NullIfBlank(lastName),
+                FirstName = NullIfBlank(firstName),
+                Patronymic = NullIfBlank(patronymic)
             });
     }
 
     private async Task<Role?> GetRoleByNameAsync(string name)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<Role>(
             "SELECT id, name FROM roles WHERE name = @Name", new { Name = name });
     }
-
 }

@@ -1,6 +1,7 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 
-namespace MCHSWebAPI.Services.UserService.UserService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface IUserService
 {
     Task<UserDto?> GetByIdAsync(int id);

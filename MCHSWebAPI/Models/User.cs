@@ -1,4 +1,4 @@
-﻿namespace MCHSWebAPI.Models;
+namespace MCHSWebAPI.Models;
 
 public class User
 {
@@ -8,9 +8,6 @@ public class User
     public int RoleId { get; set; }
     public string? DeviceId { get; set; }
     public string? Email { get; set; }
-    public bool EmailVerified { get; set; }
-    public string? PendingEmail { get; set; }
-    public bool PendingEmailVerified { get; set; }
     public string? LastName { get; set; }
     public string? FirstName { get; set; }
     public string? Patronymic { get; set; }

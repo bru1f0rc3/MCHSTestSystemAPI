@@ -1,6 +1,7 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 
-namespace MCHSWebAPI.Services.TestService.TestService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface ITestingService
 {
     Task<StartTestResponse?> StartTestAsync(int testId, int userId);
@@ -13,5 +14,4 @@ public interface ITestingService
     Task<PagedResponse<TestResultDto>> GetAllResultsAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null);
     Task<StartTestResponse?> GetInProgressTestAsync(int testId, int userId);
     Task<bool> RegisterCheatAttemptAsync(int testResultId, int userId, ReportCheatAttemptRequest request);
-    Task<byte[]> ExportResultsCsvAsync(DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null, int? userId = null);
 }

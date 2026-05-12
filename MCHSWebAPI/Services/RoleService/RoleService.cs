@@ -1,21 +1,15 @@
 using Dapper;
 using MCHSWebAPI.Data;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.RoleService.RoleService;
+namespace MCHSWebAPI.Services.RoleService;
 
-public class RoleService : IRoleService
+public class RoleService(IDbConnectionFactory db) : IRoleService
 {
-    private readonly IDbConnectionFactory _db;
-
-    public RoleService(IDbConnectionFactory db)
-    {
-        _db = db;
-    }
-
     public async Task<IEnumerable<Role>> GetAllAsync()
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryAsync<Role>("SELECT id, name FROM roles ORDER BY id");
     }
 }

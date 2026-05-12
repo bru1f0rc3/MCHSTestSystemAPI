@@ -1,9 +1,3 @@
--- =============================================
--- MCHS Testing System Database Schema
--- PostgreSQL Script
--- =============================================
-
--- Удаление таблиц если существуют (в правильном порядке из-за foreign keys)
 DROP TABLE IF EXISTS cheat_events CASCADE;
 DROP TABLE IF EXISTS user_answers CASCADE;
 DROP TABLE IF EXISTS test_results CASCADE;
@@ -15,15 +9,11 @@ DROP TABLE IF EXISTS lectures CASCADE;
 DROP TABLE IF EXISTS paths CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
-DROP TABLE IF EXISTS verification_codes CASCADE;
 
 DROP VIEW IF EXISTS v_test_results_details CASCADE;
 DROP VIEW IF EXISTS v_test_statistics CASCADE;
 DROP FUNCTION IF EXISTS calculate_test_score(INT) CASCADE;
 
--- =============================================
--- Таблица ролей
--- =============================================
 CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE
@@ -31,18 +21,12 @@ CREATE TABLE roles (
 
 INSERT INTO roles (name) VALUES ('admin'), ('guest'), ('user');
 
--- =============================================
--- Таблица путей (учебные материалы)
--- =============================================
 CREATE TABLE paths (
     id SERIAL PRIMARY KEY,
     video_path TEXT,
     document_path TEXT
 );
 
--- =============================================
--- Таблица пользователей
--- =============================================
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
@@ -50,9 +34,6 @@ CREATE TABLE users (
     role_id INT NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
     device_id VARCHAR(255) UNIQUE,
     email VARCHAR(255),
-    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    pending_email VARCHAR(255),
-    pending_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     last_name  VARCHAR(100),
     first_name VARCHAR(100),
     patronymic VARCHAR(100),
@@ -65,24 +46,6 @@ CREATE UNIQUE INDEX uq_users_email_not_null
     ON users (email)
     WHERE email IS NOT NULL;
 
--- =============================================
--- Таблица кодов подтверждения
--- =============================================
-CREATE TABLE verification_codes (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    code VARCHAR(6) NOT NULL,
-    purpose VARCHAR(50) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    used BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_verification_codes_email ON verification_codes(email, purpose);
-
--- =============================================
--- Таблица лекций
--- =============================================
 CREATE TABLE lectures (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -93,11 +56,6 @@ CREATE TABLE lectures (
 
 CREATE INDEX idx_lectures_path_id ON lectures(path_id);
 
--- =============================================
--- Таблица тестов
---   time_limit_minutes — лимит по времени на прохождение теста
---   passing_score      — проходной балл (%)
--- =============================================
 CREATE TABLE tests (
     id SERIAL PRIMARY KEY,
     lecture_id INT REFERENCES lectures(id) ON DELETE SET NULL,
@@ -112,9 +70,6 @@ CREATE TABLE tests (
 CREATE INDEX idx_tests_lecture_id ON tests(lecture_id);
 CREATE INDEX idx_tests_created_by ON tests(created_by);
 
--- =============================================
--- Таблица вопросов
--- =============================================
 CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
     test_id INT NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
@@ -124,9 +79,6 @@ CREATE TABLE questions (
 
 CREATE INDEX idx_questions_test_id ON questions(test_id);
 
--- =============================================
--- Таблица ответов
--- =============================================
 CREATE TABLE answers (
     id SERIAL PRIMARY KEY,
     question_id INT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
@@ -137,12 +89,6 @@ CREATE TABLE answers (
 
 CREATE INDEX idx_answers_question_id ON answers(question_id);
 
--- =============================================
--- Таблица результатов тестирования
---   cheat_attempts  — кол-во зафиксированных попыток списывания
---                    (сворачивание приложения, потеря фокуса и т.п.)
---   auto_submitted  — был ли тест завершён автоматически (по таймауту)
--- =============================================
 CREATE TABLE test_results (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -157,9 +103,6 @@ CREATE TABLE test_results (
 CREATE INDEX idx_test_results_user_id ON test_results(user_id);
 CREATE INDEX idx_test_results_test_id ON test_results(test_id);
 
--- =============================================
--- Таблица ответов пользователей
--- =============================================
 CREATE TABLE user_answers (
     id SERIAL PRIMARY KEY,
     test_result_id INT NOT NULL REFERENCES test_results(id) ON DELETE CASCADE,
@@ -171,9 +114,6 @@ CREATE TABLE user_answers (
 CREATE INDEX idx_user_answers_test_result_id ON user_answers(test_result_id);
 CREATE INDEX idx_user_answers_question_id ON user_answers(question_id);
 
--- =============================================
--- Таблица событий возможного списывания (журнал)
--- =============================================
 CREATE TABLE cheat_events (
     id SERIAL PRIMARY KEY,
     test_result_id INT NOT NULL REFERENCES test_results(id) ON DELETE CASCADE,
@@ -184,9 +124,6 @@ CREATE TABLE cheat_events (
 
 CREATE INDEX idx_cheat_events_test_result_id ON cheat_events(test_result_id);
 
--- =============================================
--- Таблица отчетов
--- =============================================
 CREATE TABLE reports (
     id SERIAL PRIMARY KEY,
     created_by INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -197,16 +134,6 @@ CREATE TABLE reports (
 
 CREATE INDEX idx_reports_created_by ON reports(created_by);
 CREATE INDEX idx_reports_report_date ON reports(report_date);
-
--- =============================================
--- Администратор по умолчанию создаётся автоматически при старте backend
--- (см. MCHSWebAPI/Data/DatabaseInitializer.cs)
--- Login: admin / Password: admin123
--- =============================================
-
--- =============================================
--- Представления (Views)
--- =============================================
 
 CREATE OR REPLACE VIEW v_test_results_details AS
 SELECT
@@ -242,10 +169,6 @@ FROM tests t
 LEFT JOIN test_results tr ON t.id = tr.test_id
 GROUP BY t.id, t.title;
 
--- =============================================
--- Функции
--- =============================================
-
 CREATE OR REPLACE FUNCTION calculate_test_score(p_test_result_id INT)
 RETURNS FLOAT8 AS $$
 DECLARE
@@ -277,4 +200,3 @@ BEGIN
     RETURN v_score;
 END;
 $$ LANGUAGE plpgsql;
-

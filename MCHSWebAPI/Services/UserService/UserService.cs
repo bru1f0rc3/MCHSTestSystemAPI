@@ -1,19 +1,13 @@
 using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.UserService.UserService;
+namespace MCHSWebAPI.Services.UserService;
 
-public class UserService : IUserService
+public class UserService(IDbConnectionFactory db) : IUserService
 {
-    private readonly IDbConnectionFactory _db;
-
-    public UserService(IDbConnectionFactory db)
-    {
-        _db = db;
-    }
-
     private const string UserColumns =
         @"u.id, u.username, u.device_id as DeviceId, u.role_id as RoleId, u.email,
           u.last_name as LastName, u.first_name as FirstName, u.patronymic as Patronymic,
@@ -21,7 +15,7 @@ public class UserService : IUserService
 
     public async Task<UserDto?> GetByIdAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var user = await connection.QueryFirstOrDefaultAsync<User>(
             $@"SELECT {UserColumns}
                FROM users u JOIN roles r ON u.role_id = r.id
@@ -33,7 +27,7 @@ public class UserService : IUserService
 
     public async Task<PagedResponse<UserDto>> GetAllAsync(int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var totalCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM users");
 
@@ -55,7 +49,7 @@ public class UserService : IUserService
 
     public async Task<UserDto?> CreateAsync(CreateUserRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var exists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM users WHERE username = @Username)",
@@ -84,11 +78,21 @@ public class UserService : IUserService
 
     public async Task<bool> UpdateAsync(int id, UpdateUserRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var user = await connection.QueryFirstOrDefaultAsync<User>(
-            "SELECT id FROM users WHERE id = @Id", new { Id = id });
+            @"SELECT u.id, u.role_id AS RoleId, r.name AS RoleName
+              FROM users u JOIN roles r ON u.role_id = r.id
+              WHERE u.id = @Id", new { Id = id });
         if (user == null) return false;
+
+        if (request.RoleId.HasValue
+            && user.RoleName == "admin"
+            && request.RoleId.Value != user.RoleId
+            && await IsLastAdminAsync(id))
+        {
+            throw new InvalidOperationException("Нельзя понизить роль единственного администратора");
+        }
 
         var setClauses = new List<string>();
         var parameters = new DynamicParameters();
@@ -120,19 +124,34 @@ public class UserService : IUserService
             parameters.Add("Patronymic", string.IsNullOrWhiteSpace(request.Patronymic) ? null : request.Patronymic.Trim());
         }
 
-        if (setClauses.Count > 0)
-        {
-            await connection.ExecuteAsync(
-                $"UPDATE users SET {string.Join(", ", setClauses)} WHERE id = @Id", parameters);
-        }
+        if (setClauses.Count == 0) return false;
 
+        await connection.ExecuteAsync(
+            $"UPDATE users SET {string.Join(", ", setClauses)} WHERE id = @Id", parameters);
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        if (await IsLastAdminAsync(id))
+            throw new InvalidOperationException("Нельзя удалить единственного администратора");
+
+        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM users WHERE id = @Id", new { Id = id }) > 0;
+    }
+
+    private async Task<bool> IsLastAdminAsync(int userId)
+    {
+        using var connection = db.CreateConnection();
+        return await connection.ExecuteScalarAsync<bool>(
+            @"SELECT EXISTS(
+                SELECT 1 FROM users u JOIN roles r ON u.role_id = r.id
+                WHERE u.id = @Id AND r.name = 'admin'
+              ) AND (
+                SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id
+                WHERE r.name = 'admin'
+              ) <= 1",
+            new { Id = userId });
     }
 
     private static UserDto MapToDto(User user)

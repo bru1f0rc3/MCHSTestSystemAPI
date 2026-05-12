@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using MCHSWebAPI.Services.ReportService.ReportService;
+using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.ReportsController;
 

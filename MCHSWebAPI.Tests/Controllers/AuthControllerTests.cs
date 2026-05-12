@@ -7,14 +7,12 @@ namespace MCHSWebAPI.Tests.Controllers;
 public class AuthControllerTests
 {
     private readonly Mock<IAuthService> _authServiceMock;
-    private readonly Mock<IVerificationService> _verificationServiceMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
     {
         _authServiceMock = new Mock<IAuthService>();
-        _verificationServiceMock = new Mock<IVerificationService>();
-        _controller = new AuthController(_authServiceMock.Object, _verificationServiceMock.Object);
+        _controller = new AuthController(_authServiceMock.Object);
     }
 
     [Fact]
@@ -68,7 +66,7 @@ public class AuthControllerTests
     {
         var request = TestDataFactory.CreateRegisterRequest();
         _authServiceMock.Setup(s => s.RegisterAsync(request))
-            .ThrowsAsync(new InvalidOperationException("Email уже занят"));
+            .ThrowsAsync(new InvalidOperationException("Имя занято"));
 
         var result = await _controller.Register(request);
 
@@ -104,8 +102,7 @@ public class AuthControllerTests
         var request = new ChangePasswordRequest
         {
             OldPassword = "old123",
-            NewPassword = "newPass1",
-            VerificationCode = "123456"
+            NewPassword = "newPass1"
         };
         _authServiceMock.Setup(s => s.ChangePasswordAsync(1, request)).ReturnsAsync(true);
         SetUserId(_controller, 1);
@@ -121,8 +118,7 @@ public class AuthControllerTests
         var request = new ChangePasswordRequest
         {
             OldPassword = "wrong",
-            NewPassword = "newPass1",
-            VerificationCode = "123456"
+            NewPassword = "newPass1"
         };
         _authServiceMock.Setup(s => s.ChangePasswordAsync(1, request)).ReturnsAsync(false);
         SetUserId(_controller, 1);
@@ -162,46 +158,23 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task SendCode_WithInvalidPurpose_ReturnsBadRequest()
+    public async Task DeleteAccount_Success_ReturnsOk()
     {
-        var request = new SendCodeRequest { Email = "user@example.com", Purpose = "wrong_purpose" };
+        _authServiceMock.Setup(s => s.DeleteCurrentUserAsync(1)).ReturnsAsync(true);
+        SetUserId(_controller, 1);
 
-        var result = await _controller.SendCode(request);
-
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
-    public async Task SendCode_WithValidPurpose_ReturnsOk()
-    {
-        var request = new SendCodeRequest { Email = "user@example.com", Purpose = "registration" };
-        _verificationServiceMock.Setup(s => s.SendCodeAsync(request.Email, request.Purpose)).ReturnsAsync(true);
-
-        var result = await _controller.SendCode(request);
+        var result = await _controller.DeleteAccount();
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task VerifyCode_Valid_ReturnsOk()
+    public async Task DeleteAccount_Failure_ReturnsBadRequest()
     {
-        var request = new VerifyCodeRequest { Email = "user@example.com", Code = "123456", Purpose = "registration" };
-        _verificationServiceMock.Setup(s => s.VerifyCodeAsync(request.Email, request.Code, request.Purpose))
-            .ReturnsAsync(true);
+        _authServiceMock.Setup(s => s.DeleteCurrentUserAsync(1)).ReturnsAsync(false);
+        SetUserId(_controller, 1);
 
-        var result = await _controller.VerifyCode(request);
-
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task VerifyCode_Invalid_ReturnsBadRequest()
-    {
-        var request = new VerifyCodeRequest { Email = "user@example.com", Code = "000000", Purpose = "registration" };
-        _verificationServiceMock.Setup(s => s.VerifyCodeAsync(request.Email, request.Code, request.Purpose))
-            .ReturnsAsync(false);
-
-        var result = await _controller.VerifyCode(request);
+        var result = await _controller.DeleteAccount();
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }

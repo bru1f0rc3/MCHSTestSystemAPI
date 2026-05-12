@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using MCHSWebAPI.Services.TestService.TestService;
+using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.TestController;
 
@@ -114,26 +114,5 @@ public class TestingController : AuthorizedControllerBase
     {
         var result = await _testingService.GetAllResultsAsync(page, pageSize, startDate, endDate, searchQuery);
         return Ok(ApiResponse<PagedResponse<TestResultDto>>.Ok(result));
-    }
-    [HttpGet("my-results/export")]
-    public async Task<IActionResult> ExportMyResults(
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null)
-    {
-        var userId = GetUserId();
-        var csv = await _testingService.ExportResultsCsvAsync(startDate, endDate, null, userId);
-        var fileName = $"my_results_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
-        return File(csv, "text/csv; charset=utf-8", fileName);
-    }
-    [HttpGet("all-results/export")]
-    [Authorize(Roles = "admin")]
-    public async Task<IActionResult> ExportAllResults(
-        [FromQuery] DateTime? startDate = null,
-        [FromQuery] DateTime? endDate = null,
-        [FromQuery] string? searchQuery = null)
-    {
-        var csv = await _testingService.ExportResultsCsvAsync(startDate, endDate, searchQuery);
-        var fileName = $"all_results_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
-        return File(csv, "text/csv; charset=utf-8", fileName);
     }
 }

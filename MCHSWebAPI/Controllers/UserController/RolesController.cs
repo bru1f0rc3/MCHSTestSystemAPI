@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
-using MCHSWebAPI.Services.RoleService.RoleService;
 
 namespace MCHSWebAPI.Controllers.UserController;
 

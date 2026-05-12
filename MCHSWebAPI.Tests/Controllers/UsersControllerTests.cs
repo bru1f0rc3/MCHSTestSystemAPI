@@ -1,4 +1,6 @@
 using MCHSWebAPI.Tests.Helpers;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace MCHSWebAPI.Tests.Controllers;
 
@@ -11,6 +13,17 @@ public class UsersControllerTests
     {
         _userServiceMock = new Mock<IUserService>();
         _controller = new UsersController(_userServiceMock.Object);
+        SetUserId(_controller, 99);
+    }
+
+    private static void SetUserId(ControllerBase controller, int userId)
+    {
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var identity = new ClaimsIdentity(claims, "test");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
     }
 
     [Fact]

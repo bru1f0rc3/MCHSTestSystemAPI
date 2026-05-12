@@ -24,9 +24,7 @@ public static class TestDataFactory
         return new RegisterRequest
         {
             Username = username,
-            Password = password,
-            Email = "user@example.com",
-            VerificationCode = "123456"
+            Password = password
         };
     }
 

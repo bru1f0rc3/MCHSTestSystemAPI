@@ -1,6 +1,7 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 
-namespace MCHSWebAPI.Services.TestService.TestService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface ITestService
 {
     Task<TestDto?> GetByIdAsync(int id);

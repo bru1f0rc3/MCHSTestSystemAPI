@@ -1,6 +1,7 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 
-namespace MCHSWebAPI.Services.LectureService.LectureService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface ILectureService
 {
     Task<LectureDto?> GetByIdAsync(int id);

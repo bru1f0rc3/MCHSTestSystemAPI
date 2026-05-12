@@ -1,16 +1,13 @@
-using System.Globalization;
-using System.Text;
 using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.TestService.TestService;
+namespace MCHSWebAPI.Services.TestService;
 
-public class TestingService : ITestingService
+public class TestingService(IDbConnectionFactory db) : ITestingService
 {
-    private readonly IDbConnectionFactory _db;
-
     private const string ResultSelectSql = @"
         SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId, tr.started_at AS StartedAt,
                tr.finished_at AS FinishedAt, tr.score,
@@ -24,11 +21,6 @@ public class TestingService : ITestingService
         JOIN tests t ON tr.test_id = t.id
         LEFT JOIN lectures l ON t.lecture_id = l.id";
 
-    public TestingService(IDbConnectionFactory db)
-    {
-        _db = db;
-    }
-
     public async Task<StartTestResponse?> StartTestAsync(int testId, int userId)
     {
         var existing = await GetInProgressResult(userId, testId);
@@ -41,7 +33,7 @@ public class TestingService : ITestingService
         var test = await GetTestWithQuestions(testId);
         if (test == null) return null;
 
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var startedAt = DateTime.UtcNow;
         var testResultId = await connection.ExecuteScalarAsync<int>(
             @"INSERT INTO test_results (user_id, test_id, started_at)
@@ -69,7 +61,7 @@ public class TestingService : ITestingService
 
     public async Task<bool> SubmitAnswerAsync(int testResultId, int userId, SubmitAnswerRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var testResult = await LoadResultForSubmit(connection, testResultId);
         if (testResult == null || testResult.UserId != userId || testResult.FinishedAt.HasValue)
@@ -111,7 +103,7 @@ public class TestingService : ITestingService
 
     public async Task<bool> SubmitAnswersAsync(int testResultId, int userId, SubmitAnswersRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var testResult = await LoadResultForSubmit(connection, testResultId);
         if (testResult == null || testResult.UserId != userId || testResult.FinishedAt.HasValue)
@@ -186,7 +178,7 @@ public class TestingService : ITestingService
         if (testResult == null || testResult.UserId != userId)
             return null;
 
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var userAnswers = await GetUserAnswersForResult(connection, testResultId);
         var questionIds = userAnswers.Select(ua => ua.QuestionId).Distinct().ToList();
         var correctAnswersMap = await GetCorrectAnswersMap(questionIds);
@@ -213,7 +205,7 @@ public class TestingService : ITestingService
 
     public async Task<PagedResponse<TestResultDto>> GetUserResultsAsync(int userId, int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var totalCount = await connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM test_results WHERE user_id = @UserId",
@@ -237,7 +229,7 @@ public class TestingService : ITestingService
 
     public async Task<PagedResponse<TestResultDto>> GetAllResultsAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var (whereClause, parameters) = BuildAllResultsFilter(startDate, endDate, searchQuery);
         parameters.Add("PageSize", pageSize);
@@ -269,7 +261,7 @@ public class TestingService : ITestingService
 
     public async Task<bool> RegisterCheatAttemptAsync(int testResultId, int userId, ReportCheatAttemptRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var testResult = await connection.QueryFirstOrDefaultAsync<TestResult>(
             "SELECT id, user_id AS UserId, finished_at AS FinishedAt FROM test_results WHERE id = @Id",
             new { Id = testResultId });
@@ -305,43 +297,6 @@ public class TestingService : ITestingService
         }
     }
 
-    public async Task<byte[]> ExportResultsCsvAsync(DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null, int? userId = null)
-    {
-        using var connection = _db.CreateConnection();
-        var (whereClause, parameters) = BuildAllResultsFilter(startDate, endDate, searchQuery);
-        if (userId.HasValue)
-        {
-            whereClause = $"({whereClause}) AND tr.user_id = @UserIdFilter";
-            parameters.Add("UserIdFilter", userId.Value);
-        }
-
-        var results = await connection.QueryAsync<TestResult>(
-            $@"{ResultSelectSql}
-               WHERE {whereClause}
-               ORDER BY tr.started_at DESC",
-            parameters);
-
-        var sb = new StringBuilder();
-        sb.Append('\uFEFF');
-        sb.AppendLine("ID;Пользователь;Тест;Лекция;Начато;Завершено;Балл %;Проходной %;Статус;Попытки списывания;Авто-завершён");
-
-        foreach (var r in results)
-        {
-            sb.Append(r.Id).Append(';');
-            sb.Append(CsvEscape(r.Username)).Append(';');
-            sb.Append(CsvEscape(r.TestTitle)).Append(';');
-            sb.Append(CsvEscape(r.LectureTitle)).Append(';');
-            sb.Append(r.StartedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)).Append(';');
-            sb.Append(r.FinishedAt?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? "").Append(';');
-            sb.Append(r.Score?.ToString("F2", CultureInfo.InvariantCulture) ?? "").Append(';');
-            sb.Append(r.PassingScore?.ToString() ?? "70").Append(';');
-            sb.Append(CsvEscape(r.Status)).Append(';');
-            sb.Append(r.CheatAttempts).Append(';');
-            sb.Append(r.AutoSubmitted ? "да" : "нет").AppendLine();
-        }
-
-        return Encoding.UTF8.GetBytes(sb.ToString());
-    }
 
     private static bool IsTimedOut(DateTime startedAt, int? timeLimitMinutes)
     {
@@ -351,7 +306,7 @@ public class TestingService : ITestingService
 
     private async Task CalculateAndStoreScore(int testResultId, bool autoSubmitted)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var testResult = await connection.QueryFirstOrDefaultAsync<TestResult>(
             @"SELECT id, test_id AS TestId, finished_at AS FinishedAt
@@ -393,7 +348,7 @@ public class TestingService : ITestingService
 
     private async Task<TestResult?> GetInProgressResult(int userId, int testId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<TestResult>(
             @"SELECT tr.id, tr.user_id AS UserId, tr.test_id AS TestId,
                      tr.started_at AS StartedAt, tr.finished_at AS FinishedAt, tr.score,
@@ -407,7 +362,7 @@ public class TestingService : ITestingService
 
     private async Task<Test?> GetTestWithQuestions(int testId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var test = await connection.QueryFirstOrDefaultAsync<Test>(
             @"SELECT t.id, t.lecture_id AS LectureId, t.title, t.description,
@@ -446,7 +401,7 @@ public class TestingService : ITestingService
 
     private async Task<TestResult?> GetTestResultWithDetails(int testResultId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<TestResult>(
             $"{ResultSelectSql} WHERE tr.id = @Id",
             new { Id = testResultId });
@@ -456,7 +411,7 @@ public class TestingService : ITestingService
     {
         if (questionIds.Count == 0) return new Dictionary<int, List<Answer>>();
 
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var answers = await connection.QueryAsync<Answer>(
             @"SELECT id, question_id AS QuestionId, answer_text AS AnswerText,
                      is_correct AS IsCorrect, position
@@ -520,7 +475,7 @@ public class TestingService : ITestingService
 
     private async Task<FinishTestResponse> BuildFinishResponse(int testResultId, TestResult testResult)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var totalQuestions = await connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM questions WHERE test_id = @TestId",
@@ -624,12 +579,4 @@ public class TestingService : ITestingService
         return (string.Join(" AND ", conditions), parameters);
     }
 
-    private static string CsvEscape(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        var escaped = value.Replace("\"", "\"\"");
-        if (escaped.Contains(';') || escaped.Contains('"') || escaped.Contains('\n'))
-            return $"\"{escaped}\"";
-        return escaped;
-    }
 }

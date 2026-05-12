@@ -1,6 +1,5 @@
-﻿using MCHSWebAPI.Models;
+namespace MCHSWebAPI.Interfaces;
 
-namespace MCHSWebAPI.Services.TestService.TestService;
 public interface IPdfParserService
 {
     Task<ParsedTestData> ParseTestFromPdfAsync(Stream pdfStream);

@@ -1,6 +1,7 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 
-namespace MCHSWebAPI.Services.ReportService.ReportService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface IReportService
 {
     Task<ReportDto?> GetByIdAsync(int id);

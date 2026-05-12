@@ -1,15 +1,13 @@
 using Dapper;
 using MCHSWebAPI.Data;
 using MCHSWebAPI.DTOs;
+using MCHSWebAPI.Interfaces;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.TestService.TestService;
+namespace MCHSWebAPI.Services.TestService;
 
-public class TestService : ITestService
+public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserService) : ITestService
 {
-    private readonly IDbConnectionFactory _db;
-    private readonly IPdfParserService _pdfParserService;
-
     private const string TestBaseColumns = @"
         t.id, t.lecture_id AS LectureId, t.title, t.description,
         t.time_limit_minutes AS TimeLimitMinutes, t.passing_score AS PassingScore,
@@ -21,15 +19,9 @@ public class TestService : ITestService
         LEFT JOIN lectures l ON t.lecture_id = l.id
         JOIN users u ON t.created_by = u.id";
 
-    public TestService(IDbConnectionFactory db, IPdfParserService pdfParserService)
-    {
-        _db = db;
-        _pdfParserService = pdfParserService;
-    }
-
     public async Task<TestDto?> GetByIdAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var sql = $"SELECT {TestBaseColumns} {TestBaseFrom} WHERE t.id = @Id";
 
         var test = await connection.QueryFirstOrDefaultAsync<Test>(sql, new { Id = id });
@@ -43,7 +35,7 @@ public class TestService : ITestService
 
     public async Task<TestDetailDto?> GetByIdWithQuestionsAsync(int id, bool includeCorrectAnswers)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var sql = $"SELECT {TestBaseColumns} {TestBaseFrom} WHERE t.id = @Id";
 
         var test = await connection.QueryFirstOrDefaultAsync<Test>(sql, new { Id = id });
@@ -98,7 +90,7 @@ public class TestService : ITestService
 
     public async Task<PagedResponse<TestDto>> GetAllAsync(int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var totalCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM tests");
 
@@ -124,7 +116,7 @@ public class TestService : ITestService
 
     public async Task<PagedResponse<TestDto>> GetAvailableForUserAsync(int userId, int page, int pageSize)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         const string notPassedCondition = @"
             NOT EXISTS (
@@ -159,7 +151,7 @@ public class TestService : ITestService
 
     public async Task<IEnumerable<TestDto>> GetByLectureIdAsync(int lectureId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var sql = $@"
             SELECT {TestBaseColumns}
             {TestBaseFrom}
@@ -173,7 +165,7 @@ public class TestService : ITestService
 
     public async Task<TestDto?> CreateAsync(CreateTestRequest request, int createdBy)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
 
@@ -222,7 +214,7 @@ public class TestService : ITestService
 
     public async Task<bool> UpdateAsync(int id, UpdateTestRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var exists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM tests WHERE id = @Id)", new { Id = id });
         if (!exists) return false;
@@ -237,7 +229,7 @@ public class TestService : ITestService
         if (request.TimeLimitMinutes.HasValue) { sets.Add("time_limit_minutes = @TimeLimitMinutes"); parameters.Add("TimeLimitMinutes", request.TimeLimitMinutes.Value); }
         if (request.PassingScore.HasValue) { sets.Add("passing_score = @PassingScore"); parameters.Add("PassingScore", request.PassingScore.Value); }
 
-        if (sets.Count == 0) return true;
+        if (sets.Count == 0) return false;
 
         var sql = $"UPDATE tests SET {string.Join(", ", sets)} WHERE id = @Id";
         return await connection.ExecuteAsync(sql, parameters) > 0;
@@ -245,13 +237,13 @@ public class TestService : ITestService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM tests WHERE id = @Id", new { Id = id }) > 0;
     }
 
     public async Task<QuestionDto?> AddQuestionAsync(int testId, CreateQuestionRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
 
         var testExists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM tests WHERE id = @Id)", new { Id = testId });
@@ -310,7 +302,7 @@ public class TestService : ITestService
 
     public async Task<bool> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var question = await connection.QueryFirstOrDefaultAsync<Question>(
             @"SELECT id, test_id AS TestId, question_text AS QuestionText, position
               FROM questions WHERE id = @Id", new { Id = questionId });
@@ -326,13 +318,13 @@ public class TestService : ITestService
 
     public async Task<bool> DeleteQuestionAsync(int questionId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM questions WHERE id = @Id", new { Id = questionId }) > 0;
     }
 
     public async Task<AnswerDto?> AddAnswerAsync(int questionId, CreateAnswerRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var questionExists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM questions WHERE id = @Id)", new { Id = questionId });
         if (!questionExists) return null;
@@ -353,7 +345,7 @@ public class TestService : ITestService
 
     public async Task<bool> UpdateAnswerAsync(int answerId, UpdateAnswerRequest request)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         var answer = await connection.QueryFirstOrDefaultAsync<Answer>(
             @"SELECT id, question_id AS QuestionId, answer_text AS AnswerText,
                      is_correct AS IsCorrect, position
@@ -371,18 +363,18 @@ public class TestService : ITestService
 
     public async Task<bool> DeleteAnswerAsync(int answerId)
     {
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM answers WHERE id = @Id", new { Id = answerId }) > 0;
     }
 
     public async Task<TestDto?> ImportFromPdfAsync(int lectureId, string title, string? description, int? timeLimitMinutes, Stream pdfStream, int createdBy)
     {
-        var parsedData = await _pdfParserService.ParseTestFromPdfAsync(pdfStream);
+        var parsedData = await pdfParserService.ParseTestFromPdfAsync(pdfStream);
 
         if (parsedData.Questions.Count == 0)
             throw new InvalidOperationException("PDF не содержит вопросов");
 
-        using var connection = _db.CreateConnection();
+        using var connection = db.CreateConnection();
         connection.Open();
         using var transaction = connection.BeginTransaction();
 

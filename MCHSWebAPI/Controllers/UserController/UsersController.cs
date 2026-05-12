@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
-using MCHSWebAPI.Services.UserService.UserService;
+using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.UserController;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "admin")]
-public class UsersController : ControllerBase
+public class UsersController : AuthorizedControllerBase
 {
     private readonly IUserService _userService;
 
@@ -16,6 +16,7 @@ public class UsersController : ControllerBase
     {
         _userService = userService;
     }
+
     [HttpGet]
     public async Task<ActionResult<ApiResponse<PagedResponse<UserDto>>>> GetAll(
         [FromQuery] int page = 1,
@@ -24,6 +25,7 @@ public class UsersController : ControllerBase
         var result = await _userService.GetAllAsync(page, pageSize);
         return Ok(ApiResponse<PagedResponse<UserDto>>.Ok(result));
     }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<ApiResponse<UserDto>>> GetById(int id)
     {
@@ -33,6 +35,7 @@ public class UsersController : ControllerBase
 
         return Ok(ApiResponse<UserDto>.Ok(result));
     }
+
     [HttpPost]
     public async Task<ActionResult<ApiResponse<UserDto>>> Create([FromBody] CreateUserRequest request)
     {
@@ -42,22 +45,41 @@ public class UsersController : ControllerBase
 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, ApiResponse<UserDto>.Ok(result, "Пользователь создан"));
     }
+
     [HttpPut("{id}")]
     public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] UpdateUserRequest request)
     {
-        var result = await _userService.UpdateAsync(id, request);
-        if (!result)
-            return NotFound(ApiResponse<bool>.Fail("Пользователь не найден или данные некорректны"));
+        try
+        {
+            var result = await _userService.UpdateAsync(id, request);
+            if (!result)
+                return NotFound(ApiResponse<bool>.Fail("Пользователь не найден или нет полей для обновления"));
 
-        return Ok(ApiResponse<bool>.Ok(true, "Пользователь обновлен"));
+            return Ok(ApiResponse<bool>.Ok(true, "Пользователь обновлен"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<bool>.Fail(ex.Message));
+        }
     }
+
     [HttpDelete("{id}")]
     public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
     {
-        var result = await _userService.DeleteAsync(id);
-        if (!result)
-            return NotFound(ApiResponse<bool>.Fail("Пользователь не найден"));
+        if (id == GetUserId())
+            return BadRequest(ApiResponse<bool>.Fail("Нельзя удалить собственный аккаунт через панель администратора"));
 
-        return Ok(ApiResponse<bool>.Ok(true, "Пользователь удален"));
+        try
+        {
+            var result = await _userService.DeleteAsync(id);
+            if (!result)
+                return NotFound(ApiResponse<bool>.Fail("Пользователь не найден"));
+
+            return Ok(ApiResponse<bool>.Ok(true, "Пользователь удален"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<bool>.Fail(ex.Message));
+        }
     }
 }

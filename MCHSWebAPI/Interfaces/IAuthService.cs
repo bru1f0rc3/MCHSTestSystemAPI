@@ -1,7 +1,8 @@
-﻿using MCHSWebAPI.DTOs;
+using MCHSWebAPI.DTOs;
 using MCHSWebAPI.Models;
 
-namespace MCHSWebAPI.Services.AuthService.AuthService;
+namespace MCHSWebAPI.Interfaces;
+
 public interface IAuthService
 {
     Task<AuthResponse?> LoginAsync(LoginRequest request);
@@ -11,10 +12,6 @@ public interface IAuthService
     Task<bool> ChangePasswordAsync(int userId, ChangePasswordRequest request);
     Task<UserProfileResponse?> GetProfileAsync(int userId);
     Task<UserProfileResponse?> UpdateProfileAsync(int userId, UpdateProfileRequest request);
-    Task<string?> RequestPasswordResetCodeAsync(string loginOrEmail);
-    Task<bool> ConfirmPasswordResetAsync(string loginOrEmail, string code, string newPassword);
-    Task<string?> SendChangePasswordCodeAsync(int userId);
-    Task<string?> SendDeleteAccountCodeAsync(int userId);
-    Task<bool> DeleteCurrentUserAsync(int userId, string code);
+    Task<bool> DeleteCurrentUserAsync(int userId);
     string GenerateToken(User user);
 }
