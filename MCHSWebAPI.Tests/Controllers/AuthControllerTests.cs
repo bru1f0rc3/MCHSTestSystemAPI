@@ -129,6 +129,73 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task ChangePassword_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
+    {
+        var request = new ChangePasswordRequest
+        {
+            OldPassword = "old123",
+            NewPassword = "newPass1"
+        };
+        _authServiceMock.Setup(s => s.ChangePasswordAsync(1, request))
+            .ThrowsAsync(new InvalidOperationException("Гостевой аккаунт не может менять пароль"));
+        SetUserId(_controller, 1);
+
+        var result = await _controller.ChangePassword(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task GuestStatus_ReturnsOk()
+    {
+        var request = new GuestStatusRequest { DeviceId = "device-123" };
+        var status = new GuestStatusResponse
+        {
+            HasExistingAccount = true,
+            IsGuestAccount = true,
+            Username = "guest_abc"
+        };
+        _authServiceMock.Setup(s => s.GetGuestStatusAsync("device-123")).ReturnsAsync(status);
+
+        var result = await _controller.GuestStatus(request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WhenExists_ReturnsOk()
+    {
+        var request = new UpdateProfileRequest { FirstName = "Иван", LastName = "Иванов" };
+        var profile = new UserProfileResponse
+        {
+            UserId = 1,
+            Username = "testuser",
+            Role = "user",
+            FirstName = "Иван",
+            LastName = "Иванов",
+            CreatedAt = DateTime.UtcNow
+        };
+        _authServiceMock.Setup(s => s.UpdateProfileAsync(1, request)).ReturnsAsync(profile);
+        SetUserId(_controller, 1);
+
+        var result = await _controller.UpdateProfile(request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WhenNotFound_ReturnsNotFound()
+    {
+        var request = new UpdateProfileRequest { FirstName = "Иван" };
+        _authServiceMock.Setup(s => s.UpdateProfileAsync(1, request)).ReturnsAsync((UserProfileResponse?)null);
+        SetUserId(_controller, 1);
+
+        var result = await _controller.UpdateProfile(request);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
     public async Task GetCurrentUser_WhenExists_ReturnsOk()
     {
         var profile = new UserProfileResponse

@@ -143,6 +143,105 @@ public class TestingControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task SubmitAnswers_Failure_ReturnsBadRequest()
+    {
+        var request = new SubmitAnswersRequest
+        {
+            Answers = new List<SubmitAnswerRequest>
+            {
+                new() { QuestionId = 1, AnswerId = 2 }
+            }
+        };
+        _testingServiceMock.Setup(s => s.SubmitAnswersAsync(1, 1, request)).ReturnsAsync(false);
+
+        var result = await _controller.SubmitAnswers(1, request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task ReportCheatAttempt_Success_ReturnsOk()
+    {
+        var request = new ReportCheatAttemptRequest { EventType = "app_background" };
+        _testingServiceMock
+            .Setup(s => s.RegisterCheatAttemptAsync(1, 1, request))
+            .ReturnsAsync(true);
+
+        var result = await _controller.ReportCheatAttempt(1, request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task ReportCheatAttempt_Failure_ReturnsBadRequest()
+    {
+        var request = new ReportCheatAttemptRequest { EventType = "app_background" };
+        _testingServiceMock
+            .Setup(s => s.RegisterCheatAttemptAsync(1, 1, request))
+            .ReturnsAsync(false);
+
+        var result = await _controller.ReportCheatAttempt(1, request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task ReportCheatAttempt_WithNullBody_PassesDefaultRequest()
+    {
+        _testingServiceMock
+            .Setup(s => s.RegisterCheatAttemptAsync(1, 1, It.IsAny<ReportCheatAttemptRequest>()))
+            .ReturnsAsync(true);
+
+        var result = await _controller.ReportCheatAttempt(1, null);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _testingServiceMock.Verify(
+            s => s.RegisterCheatAttemptAsync(1, 1, It.IsAny<ReportCheatAttemptRequest>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetResultDetail_WhenExists_ReturnsOk()
+    {
+        var dto = new TestResultDetailDto
+        {
+            Id = 1,
+            TestId = 1,
+            TestTitle = "Тест",
+            Status = "passed"
+        };
+        _testingServiceMock.Setup(s => s.GetTestResultDetailAsync(1, 1)).ReturnsAsync(dto);
+
+        var result = await _controller.GetResultDetail(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetResultDetail_WhenNotExists_ReturnsNotFound()
+    {
+        _testingServiceMock.Setup(s => s.GetTestResultDetailAsync(999, 1))
+            .ReturnsAsync((TestResultDetailDto?)null);
+
+        var result = await _controller.GetResultDetail(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetAllResults_ReturnsOk()
+    {
+        var paged = TestDataFactory.CreatePagedResponse(new List<TestResultDto>());
+        _testingServiceMock
+            .Setup(s => s.GetAllResultsAsync(1, 20, null, null, null))
+            .ReturnsAsync(paged);
+
+        var result = await _controller.GetAllResults();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
     private static void SetUserId(ControllerBase controller, int userId)
     {
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };

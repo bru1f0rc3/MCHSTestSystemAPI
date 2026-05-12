@@ -1,6 +1,7 @@
 using MCHSWebAPI.Tests.Helpers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using System.Text;
 
 namespace MCHSWebAPI.Tests.Controllers;
 
@@ -56,6 +57,27 @@ public class TestsControllerTests
         _testServiceMock.Setup(s => s.GetByIdWithQuestionsAsync(1, true)).ReturnsAsync(detail);
 
         var result = await _controller.GetByIdWithQuestions(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetByIdWithQuestions_WhenNotExists_ReturnsNotFound()
+    {
+        _testServiceMock.Setup(s => s.GetByIdWithQuestionsAsync(999, true)).ReturnsAsync((TestDetailDto?)null);
+
+        var result = await _controller.GetByIdWithQuestions(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetAvailable_ReturnsOk()
+    {
+        var paged = TestDataFactory.CreatePagedResponse(new List<TestDto> { TestDataFactory.CreateTestDto() });
+        _testServiceMock.Setup(s => s.GetAvailableForUserAsync(1, 1, 20)).ReturnsAsync(paged);
+
+        var result = await _controller.GetAvailable();
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -177,6 +199,150 @@ public class TestsControllerTests
         var result = await _controller.DeleteQuestion(999);
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateQuestion_WhenExists_ReturnsOk()
+    {
+        var request = new UpdateQuestionRequest { QuestionText = "Обновлено" };
+        _testServiceMock.Setup(s => s.UpdateQuestionAsync(1, request)).ReturnsAsync(true);
+
+        var result = await _controller.UpdateQuestion(1, request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateQuestion_WhenNotExists_ReturnsNotFound()
+    {
+        var request = new UpdateQuestionRequest { QuestionText = "Обновлено" };
+        _testServiceMock.Setup(s => s.UpdateQuestionAsync(999, request)).ReturnsAsync(false);
+
+        var result = await _controller.UpdateQuestion(999, request);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task AddAnswer_WhenSuccess_ReturnsOk()
+    {
+        var request = new CreateAnswerRequest { AnswerText = "Ответ", IsCorrect = true, Position = 1 };
+        var answer = new AnswerDto { Id = 1, AnswerText = "Ответ", IsCorrect = true };
+        _testServiceMock.Setup(s => s.AddAnswerAsync(1, request)).ReturnsAsync(answer);
+
+        var result = await _controller.AddAnswer(1, request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task AddAnswer_WhenServiceReturnsNull_ReturnsBadRequest()
+    {
+        var request = new CreateAnswerRequest { AnswerText = "Ответ", Position = 1 };
+        _testServiceMock.Setup(s => s.AddAnswerAsync(1, request)).ReturnsAsync((AnswerDto?)null);
+
+        var result = await _controller.AddAnswer(1, request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateAnswer_WhenExists_ReturnsOk()
+    {
+        var request = new UpdateAnswerRequest { AnswerText = "Обновлено" };
+        _testServiceMock.Setup(s => s.UpdateAnswerAsync(1, request)).ReturnsAsync(true);
+
+        var result = await _controller.UpdateAnswer(1, request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateAnswer_WhenNotExists_ReturnsNotFound()
+    {
+        var request = new UpdateAnswerRequest { AnswerText = "Обновлено" };
+        _testServiceMock.Setup(s => s.UpdateAnswerAsync(999, request)).ReturnsAsync(false);
+
+        var result = await _controller.UpdateAnswer(999, request);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteAnswer_WhenExists_ReturnsOk()
+    {
+        _testServiceMock.Setup(s => s.DeleteAnswerAsync(1)).ReturnsAsync(true);
+
+        var result = await _controller.DeleteAnswer(1);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteAnswer_WhenNotExists_ReturnsNotFound()
+    {
+        _testServiceMock.Setup(s => s.DeleteAnswerAsync(999)).ReturnsAsync(false);
+
+        var result = await _controller.DeleteAnswer(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task ImportFromPdf_WhenSuccess_ReturnsOk()
+    {
+        var request = BuildImportRequest();
+        var dto = TestDataFactory.CreateTestDto();
+        _testServiceMock
+            .Setup(s => s.ImportFromPdfAsync(1, "Title", null, null, It.IsAny<Stream>(), 1))
+            .ReturnsAsync(dto);
+
+        var result = await _controller.ImportFromPdf(request);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task ImportFromPdf_WhenServiceReturnsNull_ReturnsBadRequest()
+    {
+        var request = BuildImportRequest();
+        _testServiceMock
+            .Setup(s => s.ImportFromPdfAsync(1, "Title", null, null, It.IsAny<Stream>(), 1))
+            .ReturnsAsync((TestDto?)null);
+
+        var result = await _controller.ImportFromPdf(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task ImportFromPdf_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
+    {
+        var request = BuildImportRequest();
+        _testServiceMock
+            .Setup(s => s.ImportFromPdfAsync(1, "Title", null, null, It.IsAny<Stream>(), 1))
+            .ThrowsAsync(new InvalidOperationException("Не удалось распарсить PDF"));
+
+        var result = await _controller.ImportFromPdf(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    private static ImportTestFromPdfDto BuildImportRequest()
+    {
+        var bytes = Encoding.UTF8.GetBytes("fake-pdf");
+        var stream = new MemoryStream(bytes);
+        var file = new FormFile(stream, 0, bytes.Length, "PdfFile", "test.pdf")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/pdf"
+        };
+        return new ImportTestFromPdfDto
+        {
+            LectureId = 1,
+            Title = "Title",
+            PdfFile = file
+        };
     }
 
     private static void SetAdmin(ControllerBase controller, int userId)

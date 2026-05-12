@@ -30,34 +30,37 @@ public class PdfParserService : IPdfParserService
 
     private static List<ParsedQuestion> ParseQuestions(string text)
     {
-        var questions = new List<ParsedQuestion>();
-        var questionPattern = @"(\d+)\.\s*(.+?)(?=\n\s*[а-г]\)|$)";
-        var questionMatches = Regex.Matches(text, questionPattern, RegexOptions.Singleline);
-        var lines = text.Split('\n');
-        ParsedQuestion? currentQuestion = null;
+        var normalized = Regex.Replace(text, @"\s+", " ").Trim();
 
-        foreach (var line in lines)
+        var tokenPattern = @"(?<num>\b\d+)\s*\.\s+|(?<letter>[а-гА-Г])\s*\)\s+";
+        var tokens = Regex.Matches(normalized, tokenPattern);
+
+        var questions = new List<ParsedQuestion>();
+        ParsedQuestion? currentQuestion = null;
+        int? expectedQuestionNumber = 1;
+
+        for (int i = 0; i < tokens.Count; i++)
         {
-            var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            var questionMatch = Regex.Match(trimmed, @"^(\d+)\.\s+(.+)");
-            if (questionMatch.Success)
+            var match = tokens[i];
+            var nextStart = i + 1 < tokens.Count ? tokens[i + 1].Index : normalized.Length;
+            var bodyStart = match.Index + match.Length;
+            var body = normalized.Substring(bodyStart, nextStart - bodyStart).Trim();
+
+            if (match.Groups["num"].Success)
             {
+                if (!int.TryParse(match.Groups["num"].Value, out var num)) continue;
+                if (expectedQuestionNumber.HasValue && num != expectedQuestionNumber.Value) continue;
+
                 if (currentQuestion != null && currentQuestion.Answers.Count > 0)
                     questions.Add(currentQuestion);
 
-                currentQuestion = new ParsedQuestion
-                {
-                    Text = questionMatch.Groups[2].Value.Trim()
-                };
-                continue;
+                currentQuestion = new ParsedQuestion { Text = body };
+                expectedQuestionNumber = num + 1;
             }
-            var answerMatch = Regex.Match(trimmed, @"^([а-г])\)\s+(.+)");
-            if (answerMatch.Success && currentQuestion != null)
+            else if (match.Groups["letter"].Success && currentQuestion != null)
             {
-                var answerText = answerMatch.Groups[2].Value.Trim();
-                var isCorrect = answerText.Contains("[true]");
-                answerText = answerText.Replace("[true]", "").Trim();
+                var isCorrect = body.Contains("[true]", StringComparison.OrdinalIgnoreCase);
+                var answerText = Regex.Replace(body, @"\[true\]", "", RegexOptions.IgnoreCase).Trim();
 
                 currentQuestion.Answers.Add(new ParsedAnswer
                 {
@@ -66,6 +69,7 @@ public class PdfParserService : IPdfParserService
                 });
             }
         }
+
         if (currentQuestion != null && currentQuestion.Answers.Count > 0)
             questions.Add(currentQuestion);
 

@@ -123,4 +123,36 @@ public class UsersControllerTests
 
         result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
+
+    [Fact]
+    public async Task Delete_OwnAccount_ReturnsBadRequest()
+    {
+        var result = await _controller.Delete(99);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        _userServiceMock.Verify(s => s.DeleteAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Update_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
+    {
+        var request = new UpdateUserRequest { Username = "duplicate" };
+        _userServiceMock.Setup(s => s.UpdateAsync(1, request))
+            .ThrowsAsync(new InvalidOperationException("Имя пользователя уже занято"));
+
+        var result = await _controller.Update(1, request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task Delete_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
+    {
+        _userServiceMock.Setup(s => s.DeleteAsync(2))
+            .ThrowsAsync(new InvalidOperationException("Нельзя удалить последнего администратора"));
+
+        var result = await _controller.Delete(2);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
 }

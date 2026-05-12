@@ -49,6 +49,81 @@ public class ReportsControllerTests
     }
 
     [Fact]
+    public async Task GetUserStatistics_WhenNotExists_ReturnsNotFound()
+    {
+        _reportServiceMock.Setup(s => s.GetUserStatisticsAsync(999))
+            .ReturnsAsync((UserStatisticsDto?)null);
+
+        var result = await _controller.GetUserStatistics(999);
+
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetOverallStatistics_ReturnsOk()
+    {
+        var dashboard = new DashboardDto { TotalUsers = 10, TotalTests = 5 };
+        _reportServiceMock.Setup(s => s.GetDashboardAsync()).ReturnsAsync(dashboard);
+
+        var result = await _controller.GetOverallStatistics();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetTestsStatistics_ReturnsOkWithPagedData()
+    {
+        var stats = new List<TestStatisticsDto>
+        {
+            new() { TestId = 1, TestTitle = "T1", AverageScore = 70 },
+            new() { TestId = 2, TestTitle = "T2", AverageScore = 80 }
+        };
+        _reportServiceMock.Setup(s => s.GetTestStatisticsAsync()).ReturnsAsync(stats);
+
+        var result = await _controller.GetTestsStatistics();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetUsersPerformance_ReturnsOk()
+    {
+        var paged = TestDataFactory.CreatePagedResponse(new List<UserPerformanceDto>
+        {
+            new() { UserId = 1, Username = "user1" }
+        });
+        _reportServiceMock.Setup(s => s.GetUsersPerformanceAsync(1, 20)).ReturnsAsync(paged);
+
+        var result = await _controller.GetUsersPerformance();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetDetailedReport_ReturnsOk()
+    {
+        var report = new DetailedReportDto { GeneratedAt = DateTime.UtcNow, Kind = "all" };
+        _reportServiceMock.Setup(s => s.GetDetailedReportAsync(null, null, null, null))
+            .ReturnsAsync(report);
+
+        var result = await _controller.GetDetailedReport();
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetDetailedReport_WhenServiceThrows_Returns500()
+    {
+        _reportServiceMock.Setup(s => s.GetDetailedReportAsync(null, null, null, null))
+            .ThrowsAsync(new Exception("DB error"));
+
+        var result = await _controller.GetDetailedReport();
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(500);
+    }
+
+    [Fact]
     public async Task GetDashboard_ReturnsOk()
     {
         var dashboard = new DashboardDto { TotalUsers = 10, TotalTests = 5 };
@@ -115,6 +190,17 @@ public class ReportsControllerTests
         var result = await _controller.Create(request);
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task Create_WhenServiceReturnsNull_ReturnsBadRequest()
+    {
+        var request = new CreateReportRequest { Title = "Отчёт" };
+        _reportServiceMock.Setup(s => s.CreateAsync(request, 1)).ReturnsAsync((ReportDto?)null);
+
+        var result = await _controller.Create(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     [Fact]
