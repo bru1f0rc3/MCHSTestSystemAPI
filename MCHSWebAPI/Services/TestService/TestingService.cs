@@ -43,7 +43,8 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return BuildStartResponse(testResultId, test, startedAt);
     }
 
-    public async Task<StartTestResponse?> GetInProgressTestAsync(int testId, int userId)
+    // Возобновление незавершённого теста — используется только внутри StartTestAsync.
+    private async Task<StartTestResponse?> GetInProgressTestAsync(int testId, int userId)
     {
         var result = await GetInProgressResult(userId, testId);
         if (result == null) return null;

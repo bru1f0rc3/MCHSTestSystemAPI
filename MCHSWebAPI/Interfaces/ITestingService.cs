@@ -12,6 +12,5 @@ public interface ITestingService
     Task<TestResultDetailDto?> GetTestResultDetailAsync(int testResultId, int userId);
     Task<PagedResponse<TestResultDto>> GetUserResultsAsync(int userId, int page, int pageSize);
     Task<PagedResponse<TestResultDto>> GetAllResultsAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null);
-    Task<StartTestResponse?> GetInProgressTestAsync(int testId, int userId);
     Task<bool> RegisterCheatAttemptAsync(int testResultId, int userId, ReportCheatAttemptRequest request);
 }

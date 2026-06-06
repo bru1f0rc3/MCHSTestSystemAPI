@@ -16,9 +16,6 @@ public static class DatabaseInitializer
                 @"ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name  VARCHAR(100);
                   ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);
                   ALTER TABLE users ADD COLUMN IF NOT EXISTS patronymic VARCHAR(100);
-                  ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
-                  ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email VARCHAR(255);
-                  ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email_verified BOOLEAN NOT NULL DEFAULT FALSE;
                   CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_not_null
                     ON users (email)
                     WHERE email IS NOT NULL;
