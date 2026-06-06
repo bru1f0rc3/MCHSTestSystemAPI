@@ -2,39 +2,68 @@
 # Самодостаточный установщик MCHS API для Ubuntu / Debian / Astra Linux.
 # Запускается на целевом сервере с правами root (или через sudo).
 #
-# Схема БД, шаблон конфига и systemd-юнит встроены прямо в этот скрипт —
-# никаких соседних файлов не нужно. Требуется только распакованный билд API.
+# Все параметры захардкожены ниже (без переменных окружения).
+# Перед установкой скрипт спрашивает: установить заново или переустановить
+# (с удалением текущей службы и файлов API).
 #
-# Параметры через переменные окружения:
-#   MCHS_DB_PASSWORD   — пароль для пользователя БД mchsapi              (обязателен)
-#   MCHS_JWT_KEY       — секрет для JWT, минимум 32 символа              (обязателен)
-#   MCHS_API_URL       — ссылка на архив с билдом (.7z / .tar.gz / .zip).
-#                        Если задана — архив скачивается и распаковывается сам.
-#   MCHS_API_DIR       — каталог с распакованным билдом (где MCHSWebAPI.dll).
-#                        Если не задан — ищется рядом со скриптом: ./, ./api
-#   MCHS_API_PORT      — HTTP-порт API                       (по умолчанию 5000)
-#   MCHS_INSTALL_DIR   — куда поставить API           (по умолчанию /opt/mchs-api)
+# Запуск:
+#   sudo bash install-deb.sh
 #
-# Пример (скачать билд с GitHub Release и установить одной командой):
-#   sudo MCHS_DB_PASSWORD='S3cret!' MCHS_JWT_KEY='your-very-long-jwt-key-32-chars+' \
-#        MCHS_API_URL='https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/api_linux.7z' \
-#        bash install-deb.sh
+# Билд API берётся:
+#   1) из каталога рядом со скриптом (./api или ./, где лежит MCHSWebAPI.dll);
+#   2) если рядом нет — скачивается с GitHub Release (API_URL ниже).
 
 set -euo pipefail
 
+# ===================== ЖЁСТКО ЗАДАННЫЕ ПАРАМЕТРЫ =====================
 APP_USER="mchsapi"
-INSTALL_DIR="${MCHS_INSTALL_DIR:-/opt/mchs-api}"
-DB_NAME="mchsdb"
-DB_USER="mchsapi"
-DB_PASSWORD="${MCHS_DB_PASSWORD:?MCHS_DB_PASSWORD не задан}"
-API_PORT="${MCHS_API_PORT:-5000}"
-JWT_KEY="${MCHS_JWT_KEY:?MCHS_JWT_KEY не задан}"
+INSTALL_DIR="/opt/mchs-api"
+DB_NAME="MCHSDB"
+DB_USER="postgres"
+DB_PASSWORD="123123"
+API_PORT="5000"
+JWT_KEY="YourSuperSecretKeyForJWTTokenGenerationMustBeAtLeast32Characters!"
+API_URL="https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/api_linux.7z"
+# ====================================================================
 
 log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 if [[ "$(id -u)" -ne 0 ]]; then
     echo "Скрипт должен выполняться от root (используйте sudo)." >&2
     exit 1
+fi
+
+# --- Выбор действия: установить / переустановить ------------------------------
+SERVICE_EXISTS=0
+if systemctl list-unit-files 2>/dev/null | grep -q '^mchs-api\.service' || [[ -d "$INSTALL_DIR" ]]; then
+    SERVICE_EXISTS=1
+fi
+
+ACTION="install"
+if [[ "$SERVICE_EXISTS" -eq 1 ]]; then
+    echo
+    echo "Обнаружена существующая установка MCHS API."
+    echo "  1) Переустановить — удалить текущую службу и API, поставить заново (по умолчанию)"
+    echo "  2) Установить поверх — обновить файлы, не удаляя службу заранее"
+    echo "  3) Отмена"
+    CHOICE=""
+    read -r -p "Выберите действие [1/2/3]: " CHOICE </dev/tty || CHOICE=""
+    case "$CHOICE" in
+        2) ACTION="install" ;;
+        3) echo "Отменено пользователем."; exit 0 ;;
+        *) ACTION="reinstall" ;;
+    esac
+fi
+
+# --- Удаление текущей установки (только при переустановке) --------------------
+if [[ "$ACTION" == "reinstall" ]]; then
+    log "Переустановка: удаляю текущую службу и файлы API..."
+    systemctl stop mchs-api.service 2>/dev/null || true
+    systemctl disable mchs-api.service 2>/dev/null || true
+    rm -f /etc/systemd/system/mchs-api.service
+    systemctl daemon-reload 2>/dev/null || true
+    rm -rf "${INSTALL_DIR:?}"
+    log "Старая установка удалена."
 fi
 
 # --- 0. Поиск / загрузка билда API --------------------------------------------
@@ -45,23 +74,21 @@ find_dll_dir() {
     [[ -n "$dll" ]] && dirname "$dll"
 }
 
-API_DIR="${MCHS_API_DIR:-}"
+API_DIR=""
 
 # 0a. Каталог рядом со скриптом.
-if [[ -z "$API_DIR" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "$PWD")"
-    for cand in "$SCRIPT_DIR/api" "$SCRIPT_DIR" "$PWD/api" "$PWD"; do
-        if [[ -f "$cand/MCHSWebAPI.dll" ]]; then API_DIR="$cand"; break; fi
-    done
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "$PWD")"
+for cand in "$SCRIPT_DIR/api" "$SCRIPT_DIR" "$PWD/api" "$PWD"; do
+    if [[ -f "$cand/MCHSWebAPI.dll" ]]; then API_DIR="$cand"; break; fi
+done
 
-# 0b. Если не нашли, но задан URL — качаем и распаковываем архив.
-if [[ -z "$API_DIR" || ! -f "$API_DIR/MCHSWebAPI.dll" ]] && [[ -n "${MCHS_API_URL:-}" ]]; then
-    log "Скачивание билда API: $MCHS_API_URL"
+# 0b. Если рядом не нашли — качаем и распаковываем архив с GitHub Release.
+if [[ -z "$API_DIR" || ! -f "$API_DIR/MCHSWebAPI.dll" ]]; then
+    log "Билд рядом не найден — скачиваю с GitHub Release: $API_URL"
     DL_DIR="$(mktemp -d)"
-    ARCHIVE="$DL_DIR/$(basename "${MCHS_API_URL%%\?*}")"
+    ARCHIVE="$DL_DIR/$(basename "${API_URL%%\?*}")"
     EXTRACT_DIR="$DL_DIR/extracted"; mkdir -p "$EXTRACT_DIR"
-    curl -fL --retry 3 "$MCHS_API_URL" -o "$ARCHIVE"
+    curl -fL --retry 3 "$API_URL" -o "$ARCHIVE"
     case "$ARCHIVE" in
         *.7z)
             if ! command -v 7z >/dev/null 2>&1 && ! command -v 7za >/dev/null 2>&1; then
@@ -79,7 +106,7 @@ fi
 
 if [[ -z "$API_DIR" || ! -f "$API_DIR/MCHSWebAPI.dll" ]]; then
     echo "Не найден билд API (MCHSWebAPI.dll)." >&2
-    echo "Укажите MCHS_API_URL=<ссылка на архив> или MCHS_API_DIR=/path/to/api." >&2
+    echo "Положите распакованный билд рядом со скриптом (в ./api) или проверьте API_URL." >&2
     exit 1
 fi
 log "Билд API: $API_DIR"
@@ -156,24 +183,17 @@ fi
 systemctl enable postgresql >/dev/null 2>&1 || true
 systemctl restart postgresql
 
-# --- 5. Создание роли и БД ----------------------------------------------------
+# --- 5. Пароль пользователя postgres и создание БД ----------------------------
 # Переходим в каталог, доступный пользователю postgres, чтобы psql не сыпал
-# предупреждениями «could not change directory to "/root"». Дальше всё по абсолютным путям.
+# предупреждениями «could not change directory to "/root"».
 cd /tmp
-log "Создание роли БД '$DB_USER' и базы '$DB_NAME'..."
+log "Установка пароля пользователя '$DB_USER' и создание базы '$DB_NAME'..."
 sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
-DO \$\$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${DB_USER}') THEN
-        CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASSWORD}';
-    ELSE
-        ALTER ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASSWORD}';
-    END IF;
-END\$\$;
+ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
 SQL
 
 if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
-    sudo -u postgres createdb -O "${DB_USER}" "${DB_NAME}"
+    sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\" OWNER ${DB_USER};"
 fi
 
 log "Инициализация схемы БД..."
