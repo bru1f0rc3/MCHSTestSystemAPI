@@ -27,7 +27,7 @@ public class UserService(IDbConnectionFactory db) : IUserService
 
         return user == null ? null : MapToDto(user);
     }
-
+    
     public async Task<PagedResponse<UserDto>> GetAllAsync(int page, int pageSize)
     {
         using var connection = db.CreateConnection();

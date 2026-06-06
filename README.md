@@ -46,7 +46,7 @@ sudo MCHS_DB_PASSWORD='ПарольДляБазы' \
 | `MCHS_API_PORT` | — | HTTP-порт API (по умолчанию `5000`) |
 | `MCHS_INSTALL_DIR` | — | Каталог установки (по умолчанию `/opt/mchs-api`) |
 
-После установки API доступен на `http://<ip-сервера>:5000`, документация (Scalar) — на `http://<ip-сервера>:5000/scalar`.
+После установки API доступен на `http://<ip-сервера>:5000`, документация (Scalar) — на `http://<ip-сервера>:5000/scalar/v1`.
 
 **Управление сервисом:**
 
@@ -94,7 +94,7 @@ dotnet restore
 dotnet run
 ```
 
-API доступен на `http://localhost:5000`, документация (Scalar) — на `http://localhost:5000/scalar`.
+API доступен на `http://localhost:5000`, документация (Scalar) — на `http://localhost:5000/scalar/v1`.
 
 ---
 

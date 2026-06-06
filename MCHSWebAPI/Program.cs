@@ -89,10 +89,9 @@ using (var scope = app.Services.CreateScope())
     await DatabaseInitializer.SeedSampleDataAsync(factory, logger);
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// OpenAPI-документ отдаём во всех окружениях: на нём строится Scalar UI (/scalar/v1),
+// который мапится ниже без привязки к Environment.
+app.MapOpenApi();
 
 app.UseCors("AllowAll");
 app.UseAuthentication();

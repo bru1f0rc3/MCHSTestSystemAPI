@@ -157,6 +157,9 @@ systemctl enable postgresql >/dev/null 2>&1 || true
 systemctl restart postgresql
 
 # --- 5. Создание роли и БД ----------------------------------------------------
+# Переходим в каталог, доступный пользователю postgres, чтобы psql не сыпал
+# предупреждениями «could not change directory to "/root"». Дальше всё по абсолютным путям.
+cd /tmp
 log "Создание роли БД '$DB_USER' и базы '$DB_NAME'..."
 sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
 DO \$\$
@@ -380,7 +383,9 @@ END;
 $$ LANGUAGE plpgsql;
 INITSQL
 
-sudo -u postgres psql -d "${DB_NAME}" -v ON_ERROR_STOP=1 -f "$INIT_SQL"
+# SQL подаётся через stdin (его открывает root-шелл): иначе пользователь postgres
+# не смог бы прочитать временный файл, созданный root с правами 600.
+sudo -u postgres psql -d "${DB_NAME}" -v ON_ERROR_STOP=1 -f - < "$INIT_SQL"
 rm -f "$INIT_SQL"
 
 # --- 6. Системный пользователь и каталог --------------------------------------
