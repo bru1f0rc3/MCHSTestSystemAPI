@@ -8,14 +8,17 @@
 # Параметры через переменные окружения:
 #   MCHS_DB_PASSWORD   — пароль для пользователя БД mchsapi              (обязателен)
 #   MCHS_JWT_KEY       — секрет для JWT, минимум 32 символа              (обязателен)
+#   MCHS_API_URL       — ссылка на архив с билдом (.7z / .tar.gz / .zip).
+#                        Если задана — архив скачивается и распаковывается сам.
 #   MCHS_API_DIR       — каталог с распакованным билдом (где MCHSWebAPI.dll).
 #                        Если не задан — ищется рядом со скриптом: ./, ./api
 #   MCHS_API_PORT      — HTTP-порт API                       (по умолчанию 5000)
 #   MCHS_INSTALL_DIR   — куда поставить API           (по умолчанию /opt/mchs-api)
 #
-# Пример:
+# Пример (скачать билд с GitHub Release и установить одной командой):
 #   sudo MCHS_DB_PASSWORD='S3cret!' MCHS_JWT_KEY='your-very-long-jwt-key-32-chars+' \
-#        MCHS_API_DIR=./api ./install-deb.sh
+#        MCHS_API_URL='https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/api_linux.7z' \
+#        bash install-deb.sh
 
 set -euo pipefail
 
@@ -34,20 +37,52 @@ if [[ "$(id -u)" -ne 0 ]]; then
     exit 1
 fi
 
-# --- 0. Поиск билда API -------------------------------------------------------
+# --- 0. Поиск / загрузка билда API --------------------------------------------
+# Печатает каталог с MCHSWebAPI.dll внутри $1 (или ничего).
+find_dll_dir() {
+    local dll
+    dll="$(find "$1" -maxdepth 6 -name MCHSWebAPI.dll -print -quit 2>/dev/null || true)"
+    [[ -n "$dll" ]] && dirname "$dll"
+}
+
 API_DIR="${MCHS_API_DIR:-}"
+
+# 0a. Каталог рядом со скриптом.
 if [[ -z "$API_DIR" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "$PWD")"
     for cand in "$SCRIPT_DIR/api" "$SCRIPT_DIR" "$PWD/api" "$PWD"; do
         if [[ -f "$cand/MCHSWebAPI.dll" ]]; then API_DIR="$cand"; break; fi
     done
 fi
+
+# 0b. Если не нашли, но задан URL — качаем и распаковываем архив.
+if [[ -z "$API_DIR" || ! -f "$API_DIR/MCHSWebAPI.dll" ]] && [[ -n "${MCHS_API_URL:-}" ]]; then
+    log "Скачивание билда API: $MCHS_API_URL"
+    DL_DIR="$(mktemp -d)"
+    ARCHIVE="$DL_DIR/$(basename "${MCHS_API_URL%%\?*}")"
+    EXTRACT_DIR="$DL_DIR/extracted"; mkdir -p "$EXTRACT_DIR"
+    curl -fL --retry 3 "$MCHS_API_URL" -o "$ARCHIVE"
+    case "$ARCHIVE" in
+        *.7z)
+            if ! command -v 7z >/dev/null 2>&1 && ! command -v 7za >/dev/null 2>&1; then
+                log "Установка p7zip для распаковки .7z..."
+                apt-get update -y && apt-get install -y p7zip-full
+            fi
+            if command -v 7z >/dev/null 2>&1; then 7z x -y -o"$EXTRACT_DIR" "$ARCHIVE" >/dev/null
+            else 7za x -y -o"$EXTRACT_DIR" "$ARCHIVE" >/dev/null; fi ;;
+        *.tar.gz|*.tgz) tar -xzf "$ARCHIVE" -C "$EXTRACT_DIR" ;;
+        *.zip) command -v unzip >/dev/null 2>&1 || apt-get install -y unzip; unzip -q "$ARCHIVE" -d "$EXTRACT_DIR" ;;
+        *) echo "Неизвестный формат архива: $ARCHIVE" >&2; exit 1 ;;
+    esac
+    API_DIR="$(find_dll_dir "$EXTRACT_DIR")"
+fi
+
 if [[ -z "$API_DIR" || ! -f "$API_DIR/MCHSWebAPI.dll" ]]; then
     echo "Не найден билд API (MCHSWebAPI.dll)." >&2
-    echo "Распакуйте архив с билдом и укажите путь: MCHS_API_DIR=/path/to/api" >&2
+    echo "Укажите MCHS_API_URL=<ссылка на архив> или MCHS_API_DIR=/path/to/api." >&2
     exit 1
 fi
-log "Билд API найден: $API_DIR"
+log "Билд API: $API_DIR"
 
 # --- 1. Определение дистрибутива ----------------------------------------------
 . /etc/os-release

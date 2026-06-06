@@ -2,24 +2,75 @@
 
 REST API для онлайн-тестирования сотрудников МЧС России. Поддерживает прохождение тестов, просмотр учебных материалов и отслеживание результатов.
 
-**Стек:** .NET 10 · PostgreSQL · Dapper · JWT · Swagger
+**Стек:** .NET 10 · PostgreSQL · Dapper · JWT · Scalar (OpenAPI)
 
 ---
 
-## Запуск
+## Установка на сервер (VPS) — одной командой
 
-**1. База данных**
+Готовые сборки и установочные скрипты лежат в [GitHub Release](https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/tag/publish).
+Ничего скачивать и перетаскивать вручную не нужно: скрипт сам подтянет архив с билдом,
+поставит **.NET 10** и **PostgreSQL**, создаст БД, накатит схему, сгенерирует конфиг,
+зарегистрирует systemd-сервис `mchs-api` и откроет порт в брандмауэре.
 
-Создайте БД в PostgreSQL и примените схему:
+Зайдите на сервер по SSH под root (или пользователем с `sudo`) и выполните **один** блок ниже.
+
+### Ubuntu / Debian / Astra Linux
+
+```bash
+curl -fsSL https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/install-deb.sh -o install.sh
+sudo MCHS_DB_PASSWORD='ПарольДляБазы' \
+     MCHS_JWT_KEY='секретный-ключ-минимум-32-символа-замените-меня' \
+     MCHS_API_URL='https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/api_linux.7z' \
+     bash install.sh
+```
+
+### RedOS / RHEL-совместимые
+
+```bash
+curl -fsSL https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/install-rpm.sh -o install.sh
+sudo MCHS_DB_PASSWORD='ПарольДляБазы' \
+     MCHS_JWT_KEY='секретный-ключ-минимум-32-символа-замените-меня' \
+     MCHS_API_URL='https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/download/publish/api_linux.7z' \
+     bash install.sh
+```
+
+**Переменные окружения скрипта:**
+
+| Переменная | Обязательна | Описание |
+|------------|:-----------:|----------|
+| `MCHS_DB_PASSWORD` | да | Пароль пользователя БД `mchsapi` |
+| `MCHS_JWT_KEY` | да | Секрет для JWT, **минимум 32 символа** |
+| `MCHS_API_URL` | — | Ссылка на архив билда (`.7z` / `.tar.gz` / `.zip`). Если задана — скачается и распакуется сам |
+| `MCHS_API_DIR` | — | Путь к уже распакованному билду (где `MCHSWebAPI.dll`) — вместо `MCHS_API_URL` |
+| `MCHS_API_PORT` | — | HTTP-порт API (по умолчанию `5000`) |
+| `MCHS_INSTALL_DIR` | — | Каталог установки (по умолчанию `/opt/mchs-api`) |
+
+После установки API доступен на `http://<ip-сервера>:5000`, документация (Scalar) — на `http://<ip-сервера>:5000/scalar`.
+
+**Управление сервисом:**
+
+```bash
+systemctl status mchs-api      # статус
+systemctl restart mchs-api     # перезапуск
+journalctl -u mchs-api -f      # логи в реальном времени
+```
+
+> **Важно:** при первом старте создаются учётки по умолчанию (см. [Учётные данные по умолчанию](#учетные-данные-по-умолчанию)). Сразу смените пароли.
+
+---
+
+## Локальный запуск (для разработки)
+
+**1. PostgreSQL** — поднимите локально и создайте пустую БД:
 
 ```bash
 psql -U postgres -c "CREATE DATABASE MCHSDB;"
-psql -U postgres -d MCHSDB -f Database/init.sql
 ```
 
-**2. Конфигурация**
+Схему создавать вручную не нужно — приложение само накатывает её и сидит дефолтных пользователей при старте.
 
-Откройте `MCHSWebAPI/appsettings.json` и укажите свои параметры:
+**2. Конфигурация** — `MCHSWebAPI/appsettings.json`:
 
 ```json
 {
@@ -31,18 +82,11 @@ psql -U postgres -d MCHSDB -f Database/init.sql
     "Issuer": "MCHSWebAPI",
     "Audience": "MCHSMobileApp",
     "ExpirationHours": 24
-  },
-  "Smtp": {
-    "Host": "smtp.mail.ru",
-    "Port": 587,
-    "Username": "ВАШ_EMAIL",
-    "Password": "ВАШ_ПАРОЛЬ",
-    "FromName": "МЧС Система тестирования"
   }
 }
 ```
 
-**3. Запуск**
+**3. Запуск:**
 
 ```bash
 cd MCHSWebAPI
@@ -50,7 +94,7 @@ dotnet restore
 dotnet run
 ```
 
-API доступен на `http://localhost:5000`, Swagger — на `http://localhost:5000/swagger`.
+API доступен на `http://localhost:5000`, документация (Scalar) — на `http://localhost:5000/scalar`.
 
 ---
 
@@ -175,9 +219,11 @@ MCHSWebAPI.Tests/
 ├── Services/          Тесты сервисов
 └── Helpers/           Вспомогательные фабрики данных
 
-Database/
-└── init.sql           Схема и начальные данные БД
+install-deb.sh         Установщик для Ubuntu / Debian / Astra Linux
+install-rpm.sh         Установщик для RedOS / RHEL-совместимых
 ```
+
+> Схема БД и шаблон конфига встроены прямо в установочные скрипты — отдельной папки `Database/` больше нет. Для локальной разработки схему создаёт само приложение при старте.
 
 ---
 
@@ -186,7 +232,7 @@ Database/
 ### Регистрация
 
 ```bash
-curl -X POST https://localhost:5001/api/auth/register \
+curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username": "user1", "password": "password123", "email": "user@example.com"}'
 ```
@@ -194,7 +240,7 @@ curl -X POST https://localhost:5001/api/auth/register \
 ### Вход
 
 ```bash
-curl -X POST https://localhost:5001/api/auth/login \
+curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "user1", "password": "password123"}'
 ```
@@ -214,17 +260,17 @@ curl -X POST https://localhost:5001/api/auth/login \
 
 ```bash
 # Начать тест
-curl -X POST https://localhost:5001/api/testing/start/1 \
+curl -X POST http://localhost:5000/api/testing/start/1 \
   -H "Authorization: Bearer ВАШ_ТОКЕН"
 
 # Отправить ответы
-curl -X POST https://localhost:5001/api/testing/42/answers \
+curl -X POST http://localhost:5000/api/testing/42/answers \
   -H "Authorization: Bearer ВАШ_ТОКЕН" \
   -H "Content-Type: application/json" \
   -d '{"answers": [{"questionId": 1, "answerId": 2}, {"questionId": 2, "answerId": 6}]}'
 
 # Завершить тест
-curl -X POST https://localhost:5001/api/testing/42/finish \
+curl -X POST http://localhost:5000/api/testing/42/finish \
   -H "Authorization: Bearer ВАШ_ТОКЕН"
 ```
 
@@ -244,22 +290,14 @@ curl -X POST https://localhost:5001/api/testing/42/finish \
 
 ## Учетные данные по умолчанию
 
-После выполнения `init.sql` создается администратор:
+При первом старте приложение создаёт двух пользователей:
 
-- **Username:** `admin`
-- **Password:** Необходимо установить
+| Роль | Username | Password |
+|------|----------|----------|
+| **superadmin** | `superadmin` | `superadmin123` |
+| **admin** | `admin` | `admin123` |
 
-### Установка пароля
-
-1. Сгенерируйте хеш:
-```csharp
-var hash = BCrypt.Net.BCrypt.HashPassword("ваш_пароль");
-```
-
-2. Обновите в БД:
-```sql
-UPDATE users SET password_hash = 'ХЕШ' WHERE username = 'admin';
-```
+> **Обязательно смените пароли** после первого входа — через мобильное приложение (Профиль → Личные данные) или эндпоинт `POST /api/auth/change-password`.
 
 ---
 
@@ -274,6 +312,6 @@ dotnet test
 
 ## Ссылки
 
+- [Релизы и установочные скрипты](https://github.com/bru1f0rc3/MCHSTestSystemAPI/releases/tag/publish)
 - [Формат импорта тестов](formatPDFquestionsandanswer.txt)
-- [Скрипт инициализации БД](Database/init.sql)
 - [Скачать мобильное приложение к API](https://github.com/bru1f0rc3/MCHSTestMobileAPP)
