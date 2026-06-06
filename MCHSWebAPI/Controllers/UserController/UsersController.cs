@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MCHSWebAPI.DTOs;
 using MCHSWebAPI.Interfaces;
@@ -7,7 +7,7 @@ namespace MCHSWebAPI.Controllers.UserController;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "superadmin")]
 public class UsersController : AuthorizedControllerBase
 {
     private readonly IUserService _userService;
@@ -16,6 +16,8 @@ public class UsersController : AuthorizedControllerBase
     {
         _userService = userService;
     }
+
+    private bool IsSuperAdmin => User.IsInRole("superadmin");
 
     [HttpGet]
     public async Task<ActionResult<ApiResponse<PagedResponse<UserDto>>>> GetAll(
@@ -39,19 +41,30 @@ public class UsersController : AuthorizedControllerBase
     [HttpPost]
     public async Task<ActionResult<ApiResponse<UserDto>>> Create([FromBody] CreateUserRequest request)
     {
-        var result = await _userService.CreateAsync(request);
-        if (result == null)
-            return BadRequest(ApiResponse<UserDto>.Fail("Не удалось создать пользователя. Возможно, имя уже занято."));
+        try
+        {
+            var result = await _userService.CreateAsync(request, IsSuperAdmin);
+            if (result == null)
+                return BadRequest(ApiResponse<UserDto>.Fail("Не удалось создать пользователя. Возможно, имя уже занято."));
 
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, ApiResponse<UserDto>.Ok(result, "Пользователь создан"));
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, ApiResponse<UserDto>.Ok(result, "Пользователь создан"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<UserDto>.Fail(ex.Message));
+        }
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] UpdateUserRequest request)
     {
+        if (id == GetUserId())
+            return BadRequest(ApiResponse<bool>.Fail(
+                "Нельзя редактировать собственный аккаунт через панель администратора. Используйте «Личные данные» в профиле."));
+
         try
         {
-            var result = await _userService.UpdateAsync(id, request);
+            var result = await _userService.UpdateAsync(id, request, IsSuperAdmin);
             if (!result)
                 return NotFound(ApiResponse<bool>.Fail("Пользователь не найден или нет полей для обновления"));
 
@@ -71,7 +84,7 @@ public class UsersController : AuthorizedControllerBase
 
         try
         {
-            var result = await _userService.DeleteAsync(id);
+            var result = await _userService.DeleteAsync(id, IsSuperAdmin);
             if (!result)
                 return NotFound(ApiResponse<bool>.Fail("Пользователь не найден"));
 

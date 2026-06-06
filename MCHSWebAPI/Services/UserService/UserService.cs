@@ -13,6 +13,9 @@ public class UserService(IDbConnectionFactory db) : IUserService
           u.last_name as LastName, u.first_name as FirstName, u.patronymic as Patronymic,
           u.created_at as CreatedAt, r.name as RoleName";
 
+    private static readonly HashSet<string> PrivilegedRoles =
+        new(StringComparer.OrdinalIgnoreCase) { "admin", "superadmin" };
+
     public async Task<UserDto?> GetByIdAsync(int id)
     {
         using var connection = db.CreateConnection();
@@ -47,9 +50,18 @@ public class UserService(IDbConnectionFactory db) : IUserService
         };
     }
 
-    public async Task<UserDto?> CreateAsync(CreateUserRequest request)
+    public async Task<UserDto?> CreateAsync(CreateUserRequest request, bool callerIsSuperAdmin)
     {
         using var connection = db.CreateConnection();
+
+        var role = await connection.QueryFirstOrDefaultAsync<Role>(
+            "SELECT id, name FROM roles WHERE id = @Id", new { Id = request.RoleId });
+        if (role == null)
+            throw new InvalidOperationException("Указанная роль не найдена");
+
+        if (!callerIsSuperAdmin && PrivilegedRoles.Contains(role.Name))
+            throw new InvalidOperationException(
+                "Только суперадминистратор может создавать администраторов");
 
         var exists = await connection.ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM users WHERE username = @Username)",
@@ -76,7 +88,7 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return await GetByIdAsync(userId);
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateUserRequest request)
+    public async Task<bool> UpdateAsync(int id, UpdateUserRequest request, bool callerIsSuperAdmin)
     {
         using var connection = db.CreateConnection();
 
@@ -86,12 +98,28 @@ public class UserService(IDbConnectionFactory db) : IUserService
               WHERE u.id = @Id", new { Id = id });
         if (user == null) return false;
 
-        if (request.RoleId.HasValue
-            && user.RoleName == "admin"
-            && request.RoleId.Value != user.RoleId
-            && await IsLastAdminAsync(id))
+        if (!callerIsSuperAdmin && PrivilegedRoles.Contains(user.RoleName ?? string.Empty))
+            throw new InvalidOperationException(
+                "Только суперадминистратор может изменять администраторов");
+
+        if (request.RoleId.HasValue && request.RoleId.Value != user.RoleId)
         {
-            throw new InvalidOperationException("Нельзя понизить роль единственного администратора");
+            var newRole = await connection.QueryFirstOrDefaultAsync<Role>(
+                "SELECT id, name FROM roles WHERE id = @Id", new { Id = request.RoleId.Value });
+            if (newRole == null)
+                throw new InvalidOperationException("Указанная роль не найдена");
+
+            if (!callerIsSuperAdmin && PrivilegedRoles.Contains(newRole.Name))
+                throw new InvalidOperationException(
+                    "Только суперадминистратор может назначать административные роли");
+
+            if (string.Equals(user.RoleName, "superadmin", StringComparison.OrdinalIgnoreCase)
+                && await IsLastSuperAdminAsync(id))
+                throw new InvalidOperationException("Нельзя понизить роль единственного суперадминистратора");
+
+            if (string.Equals(user.RoleName, "admin", StringComparison.OrdinalIgnoreCase)
+                && await IsLastAdminAsync(id))
+                throw new InvalidOperationException("Нельзя понизить роль единственного администратора");
         }
 
         var setClauses = new List<string>();
@@ -131,12 +159,28 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, bool callerIsSuperAdmin)
     {
-        if (await IsLastAdminAsync(id))
+        using var connection = db.CreateConnection();
+
+        var user = await connection.QueryFirstOrDefaultAsync<User>(
+            @"SELECT u.id, u.role_id AS RoleId, r.name AS RoleName
+              FROM users u JOIN roles r ON u.role_id = r.id
+              WHERE u.id = @Id", new { Id = id });
+        if (user == null) return false;
+
+        if (!callerIsSuperAdmin && PrivilegedRoles.Contains(user.RoleName ?? string.Empty))
+            throw new InvalidOperationException(
+                "Только суперадминистратор может удалять администраторов");
+
+        if (string.Equals(user.RoleName, "superadmin", StringComparison.OrdinalIgnoreCase)
+            && await IsLastSuperAdminAsync(id))
+            throw new InvalidOperationException("Нельзя удалить единственного суперадминистратора");
+
+        if (string.Equals(user.RoleName, "admin", StringComparison.OrdinalIgnoreCase)
+            && await IsLastAdminAsync(id))
             throw new InvalidOperationException("Нельзя удалить единственного администратора");
 
-        using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM users WHERE id = @Id", new { Id = id }) > 0;
     }
 
@@ -150,6 +194,20 @@ public class UserService(IDbConnectionFactory db) : IUserService
               ) AND (
                 SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id
                 WHERE r.name = 'admin'
+              ) <= 1",
+            new { Id = userId });
+    }
+
+    private async Task<bool> IsLastSuperAdminAsync(int userId)
+    {
+        using var connection = db.CreateConnection();
+        return await connection.ExecuteScalarAsync<bool>(
+            @"SELECT EXISTS(
+                SELECT 1 FROM users u JOIN roles r ON u.role_id = r.id
+                WHERE u.id = @Id AND r.name = 'superadmin'
+              ) AND (
+                SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id
+                WHERE r.name = 'superadmin'
               ) <= 1",
             new { Id = userId });
     }

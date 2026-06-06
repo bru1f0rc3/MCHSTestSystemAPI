@@ -19,7 +19,7 @@ CREATE TABLE roles (
     name VARCHAR(50) NOT NULL UNIQUE
 );
 
-INSERT INTO roles (name) VALUES ('admin'), ('guest'), ('user');
+INSERT INTO roles (name) VALUES ('superadmin'), ('admin'), ('guest'), ('user');
 
 CREATE TABLE paths (
     id SERIAL PRIMARY KEY,

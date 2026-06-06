@@ -104,7 +104,7 @@ public class TestingController : AuthorizedControllerBase
         return Ok(ApiResponse<PagedResponse<TestResultDto>>.Ok(result));
     }
     [HttpGet("all-results")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<ActionResult<ApiResponse<PagedResponse<TestResultDto>>>> GetAllResults(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,

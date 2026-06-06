@@ -36,7 +36,7 @@ public class LecturesController : ControllerBase
         return Ok(ApiResponse<LectureDto>.Ok(result));
     }
     [HttpPost]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<ActionResult<ApiResponse<LectureDto>>> Create([FromBody] CreateLectureRequest request)
     {
         var result = await _lectureService.CreateAsync(request);
@@ -46,7 +46,7 @@ public class LecturesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, ApiResponse<LectureDto>.Ok(result, "Лекция создана"));
     }
     [HttpPut("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<ActionResult<ApiResponse<bool>>> Update(int id, [FromBody] UpdateLectureRequest request)
     {
         var result = await _lectureService.UpdateAsync(id, request);
@@ -56,7 +56,7 @@ public class LecturesController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, "Лекция обновлена"));
     }
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,superadmin")]
     public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
     {
         var result = await _lectureService.DeleteAsync(id);

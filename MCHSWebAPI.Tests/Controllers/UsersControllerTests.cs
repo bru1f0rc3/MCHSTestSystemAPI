@@ -64,7 +64,7 @@ public class UsersControllerTests
     {
         var request = new CreateUserRequest { Username = "newuser", Password = "pass1234", RoleId = 1 };
         var user = TestDataFactory.CreateUserDto();
-        _userServiceMock.Setup(s => s.CreateAsync(request)).ReturnsAsync(user);
+        _userServiceMock.Setup(s => s.CreateAsync(request, It.IsAny<bool>())).ReturnsAsync(user);
 
         var result = await _controller.Create(request);
 
@@ -75,7 +75,7 @@ public class UsersControllerTests
     public async Task Create_WhenUsernameExists_ReturnsBadRequest()
     {
         var request = new CreateUserRequest { Username = "existing", Password = "pass1234", RoleId = 1 };
-        _userServiceMock.Setup(s => s.CreateAsync(request)).ReturnsAsync((UserDto?)null);
+        _userServiceMock.Setup(s => s.CreateAsync(request, It.IsAny<bool>())).ReturnsAsync((UserDto?)null);
 
         var result = await _controller.Create(request);
 
@@ -86,7 +86,7 @@ public class UsersControllerTests
     public async Task Update_WhenExists_ReturnsOk()
     {
         var request = new UpdateUserRequest { Username = "updated" };
-        _userServiceMock.Setup(s => s.UpdateAsync(1, request)).ReturnsAsync(true);
+        _userServiceMock.Setup(s => s.UpdateAsync(1, request, It.IsAny<bool>())).ReturnsAsync(true);
 
         var result = await _controller.Update(1, request);
 
@@ -97,7 +97,7 @@ public class UsersControllerTests
     public async Task Update_WhenNotExists_ReturnsNotFound()
     {
         var request = new UpdateUserRequest { Username = "updated" };
-        _userServiceMock.Setup(s => s.UpdateAsync(999, request)).ReturnsAsync(false);
+        _userServiceMock.Setup(s => s.UpdateAsync(999, request, It.IsAny<bool>())).ReturnsAsync(false);
 
         var result = await _controller.Update(999, request);
 
@@ -107,7 +107,7 @@ public class UsersControllerTests
     [Fact]
     public async Task Delete_WhenExists_ReturnsOk()
     {
-        _userServiceMock.Setup(s => s.DeleteAsync(1)).ReturnsAsync(true);
+        _userServiceMock.Setup(s => s.DeleteAsync(1, It.IsAny<bool>())).ReturnsAsync(true);
 
         var result = await _controller.Delete(1);
 
@@ -117,7 +117,7 @@ public class UsersControllerTests
     [Fact]
     public async Task Delete_WhenNotExists_ReturnsNotFound()
     {
-        _userServiceMock.Setup(s => s.DeleteAsync(999)).ReturnsAsync(false);
+        _userServiceMock.Setup(s => s.DeleteAsync(999, It.IsAny<bool>())).ReturnsAsync(false);
 
         var result = await _controller.Delete(999);
 
@@ -130,14 +130,14 @@ public class UsersControllerTests
         var result = await _controller.Delete(99);
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
-        _userServiceMock.Verify(s => s.DeleteAsync(It.IsAny<int>()), Times.Never);
+        _userServiceMock.Verify(s => s.DeleteAsync(It.IsAny<int>(), It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
     public async Task Update_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
     {
         var request = new UpdateUserRequest { Username = "duplicate" };
-        _userServiceMock.Setup(s => s.UpdateAsync(1, request))
+        _userServiceMock.Setup(s => s.UpdateAsync(1, request, It.IsAny<bool>()))
             .ThrowsAsync(new InvalidOperationException("Имя пользователя уже занято"));
 
         var result = await _controller.Update(1, request);
@@ -148,7 +148,7 @@ public class UsersControllerTests
     [Fact]
     public async Task Delete_WhenServiceThrowsInvalidOperation_ReturnsBadRequest()
     {
-        _userServiceMock.Setup(s => s.DeleteAsync(2))
+        _userServiceMock.Setup(s => s.DeleteAsync(2, It.IsAny<bool>()))
             .ThrowsAsync(new InvalidOperationException("Нельзя удалить последнего администратора"));
 
         var result = await _controller.Delete(2);

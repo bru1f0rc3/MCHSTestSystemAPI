@@ -5,6 +5,8 @@ public static class DatabaseInitializer
 {
     private const string DefaultAdminUsername = "admin";
     private const string DefaultAdminPassword = "admin123";
+    private const string DefaultSuperAdminUsername = "superadmin";
+    private const string DefaultSuperAdminPassword = "superadmin123";
     public static async Task MigrateSchemaAsync(IDbConnectionFactory factory, ILogger? logger = null)
     {
         try
@@ -19,7 +21,9 @@ public static class DatabaseInitializer
                   ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email_verified BOOLEAN NOT NULL DEFAULT FALSE;
                   CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_not_null
                     ON users (email)
-                    WHERE email IS NOT NULL;");
+                    WHERE email IS NOT NULL;
+                  INSERT INTO roles (name) VALUES ('superadmin')
+                    ON CONFLICT (name) DO NOTHING;");
         }
         catch (Exception ex)
         {
@@ -33,35 +37,50 @@ public static class DatabaseInitializer
         {
             using var connection = factory.CreateConnection();
 
-            var adminRoleId = await connection.ExecuteScalarAsync<int?>(
-                "SELECT id FROM roles WHERE name = 'admin' LIMIT 1");
+            await EnsureDefaultUserAsync(
+                connection, "superadmin",
+                DefaultSuperAdminUsername, DefaultSuperAdminPassword, logger);
 
-            if (adminRoleId == null)
-            {
-                logger?.LogWarning("Роль 'admin' не найдена — пропускаем создание дефолтного админа.");
-                return;
-            }
-
-            var exists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM users WHERE username = @Username",
-                new { Username = DefaultAdminUsername });
-
-            if (exists > 0) return;
-
-            var hash = BCrypt.Net.BCrypt.HashPassword(DefaultAdminPassword);
-            await connection.ExecuteAsync(
-                @"INSERT INTO users (username, password_hash, role_id)
-                  VALUES (@Username, @Hash, @RoleId)",
-                new { Username = DefaultAdminUsername, Hash = hash, RoleId = adminRoleId.Value });
-
-            logger?.LogInformation(
-                "Создан дефолтный администратор: {User} / {Pass}. Рекомендуется сменить пароль.",
-                DefaultAdminUsername, DefaultAdminPassword);
+            await EnsureDefaultUserAsync(
+                connection, "admin",
+                DefaultAdminUsername, DefaultAdminPassword, logger);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Ошибка при создании дефолтного администратора.");
+            logger?.LogError(ex, "Ошибка при создании дефолтных аккаунтов.");
         }
+    }
+
+    private static async Task EnsureDefaultUserAsync(
+        System.Data.IDbConnection connection,
+        string roleName, string username, string password, ILogger? logger)
+    {
+        var roleId = await connection.ExecuteScalarAsync<int?>(
+            "SELECT id FROM roles WHERE name = @Name LIMIT 1",
+            new { Name = roleName });
+
+        if (roleId == null)
+        {
+            logger?.LogWarning("Роль '{Role}' не найдена — пропускаем создание дефолтного пользователя {User}.",
+                roleName, username);
+            return;
+        }
+
+        var exists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM users WHERE username = @Username",
+            new { Username = username });
+
+        if (exists > 0) return;
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(password);
+        await connection.ExecuteAsync(
+            @"INSERT INTO users (username, password_hash, role_id)
+              VALUES (@Username, @Hash, @RoleId)",
+            new { Username = username, Hash = hash, RoleId = roleId.Value });
+
+        logger?.LogInformation(
+            "Создан дефолтный {Role}: {User} / {Pass}. Рекомендуется сменить пароль.",
+            roleName, username, password);
     }
     public static async Task SeedSampleDataAsync(IDbConnectionFactory factory, ILogger? logger = null)
     {

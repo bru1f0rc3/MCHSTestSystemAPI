@@ -105,3 +105,4 @@ app.MapScalarApiReference(options =>
 });
 
 app.Run();
+return 0;
