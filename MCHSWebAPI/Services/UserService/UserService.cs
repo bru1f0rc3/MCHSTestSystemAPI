@@ -16,6 +16,10 @@ public class UserService(IDbConnectionFactory db) : IUserService
     private static readonly HashSet<string> PrivilegedRoles =
         new(StringComparer.OrdinalIgnoreCase) { "admin", "superadmin" };
 
+    /// <summary>
+    /// Находит одного пользователя по его номеру
+    /// </summary>
+    /// <param name="id">Номер (id) пользователя, которого нужно найти</param>
     public async Task<UserDto?> GetByIdAsync(int id)
     {
         using var connection = db.CreateConnection();
@@ -28,6 +32,11 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return user == null ? null : MapToDto(user);
     }
     
+    /// <summary>
+    /// Возвращает список всех пользователей по страницам
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько пользователей помещается на одной странице</param>
     public async Task<PagedResponse<UserDto>> GetAllAsync(int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -50,6 +59,12 @@ public class UserService(IDbConnectionFactory db) : IUserService
         };
     }
 
+    /// <summary>
+    /// Создаёт нового пользователя. Администратора может создать
+    /// только суперадминистратор
+    /// </summary>
+    /// <param name="request">Данные нового пользователя: логин, пароль, роль, ФИО</param>
+    /// <param name="callerIsSuperAdmin">true, если запрос делает суперадминистратор</param>
     public async Task<UserDto?> CreateAsync(CreateUserRequest request, bool callerIsSuperAdmin)
     {
         using var connection = db.CreateConnection();
@@ -88,6 +103,14 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return await GetByIdAsync(userId);
     }
 
+    /// <summary>
+    /// Обновляет данные пользователя. Менять администраторов и назначать
+    /// административные роли может только суперадминистратор. Также нельзя
+    /// понизить роль единственного админа или суперадмина
+    /// </summary>
+    /// <param name="id">Номер (id) пользователя, которого меняем</param>
+    /// <param name="request">Новые данные пользователя (поля, которые надо обновить)</param>
+    /// <param name="callerIsSuperAdmin">true, если запрос делает суперадминистратор</param>
     public async Task<bool> UpdateAsync(int id, UpdateUserRequest request, bool callerIsSuperAdmin)
     {
         using var connection = db.CreateConnection();
@@ -159,6 +182,12 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return true;
     }
 
+    /// <summary>
+    /// Удаляет пользователя. Администраторов может удалять только
+    /// суперадминистратор, а единственного админа или суперадмина удалить нельзя
+    /// </summary>
+    /// <param name="id">Номер (id) пользователя, которого нужно удалить</param>
+    /// <param name="callerIsSuperAdmin">true, если запрос делает суперадминистратор</param>
     public async Task<bool> DeleteAsync(int id, bool callerIsSuperAdmin)
     {
         using var connection = db.CreateConnection();
@@ -184,6 +213,10 @@ public class UserService(IDbConnectionFactory db) : IUserService
         return await connection.ExecuteAsync("DELETE FROM users WHERE id = @Id", new { Id = id }) > 0;
     }
 
+    /// <summary>
+    /// Проверяет, является ли этот пользователь последним администратором в системе
+    /// </summary>
+    /// <param name="userId">Номер (id) проверяемого пользователя</param>
     private async Task<bool> IsLastAdminAsync(int userId)
     {
         using var connection = db.CreateConnection();
@@ -198,6 +231,10 @@ public class UserService(IDbConnectionFactory db) : IUserService
             new { Id = userId });
     }
 
+    /// <summary>
+    /// Проверяет, является ли этот пользователь последним суперадминистратором в системе
+    /// </summary>
+    /// <param name="userId">Номер (id) проверяемого пользователя</param>
     private async Task<bool> IsLastSuperAdminAsync(int userId)
     {
         using var connection = db.CreateConnection();
@@ -212,6 +249,10 @@ public class UserService(IDbConnectionFactory db) : IUserService
             new { Id = userId });
     }
 
+    /// <summary>
+    /// Превращает пользователя из базы в объект для отправки клиенту (DTO)
+    /// </summary>
+    /// <param name="user">Пользователь, прочитанный из базы данных</param>
     private static UserDto MapToDto(User user)
     {
         return new UserDto

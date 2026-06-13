@@ -6,6 +6,10 @@ namespace MCHSWebAPI.Services.TestService;
 
 public class PdfParserService : IPdfParserService
 {
+    /// <summary>
+    /// Читает PDF-файл и вытаскивает из него список вопросов с ответами
+    /// </summary>
+    /// <param name="pdfStream">Поток с содержимым PDF-файла</param>
     public Task<ParsedTestData> ParseTestFromPdfAsync(Stream pdfStream)
     {
         var text = ExtractTextFromPdf(pdfStream);
@@ -17,6 +21,10 @@ public class PdfParserService : IPdfParserService
         return Task.FromResult(new ParsedTestData { Questions = questions });
     }
 
+    /// <summary>
+    /// Достаёт весь текст из PDF-файла, страница за страницей
+    /// </summary>
+    /// <param name="pdfStream">Поток с содержимым PDF-файла</param>
     private static string ExtractTextFromPdf(Stream pdfStream)
     {
         using var document = PdfDocument.Open(pdfStream);
@@ -28,6 +36,12 @@ public class PdfParserService : IPdfParserService
         return text;
     }
 
+    /// <summary>
+    /// Разбирает текст и собирает из него вопросы и ответы.
+    /// Вопросы нумеруются как "1.", ответы — буквами "а)", "б)" и т.д.,
+    /// а правильный ответ помечается меткой [true]
+    /// </summary>
+    /// <param name="text">Текст, извлечённый из PDF-файла</param>
     private static List<ParsedQuestion> ParseQuestions(string text)
     {
         var normalized = Regex.Replace(text, @"\s+", " ").Trim();

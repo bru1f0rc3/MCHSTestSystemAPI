@@ -8,6 +8,10 @@ namespace MCHSWebAPI.Services.LectureService;
 
 public class LectureService(IDbConnectionFactory db) : ILectureService
 {
+    /// <summary>
+    /// Находит одну лекцию по её номеру вместе с путями к видео и документу
+    /// </summary>
+    /// <param name="id">Номер (id) лекции, которую нужно найти</param>
     public async Task<LectureDto?> GetByIdAsync(int id)
     {
         using var connection = db.CreateConnection();
@@ -38,6 +42,12 @@ public class LectureService(IDbConnectionFactory db) : ILectureService
         };
     }
 
+    /// <summary>
+    /// Возвращает список лекций по страницам, можно искать по названию или тексту
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько лекций помещается на одной странице</param>
+    /// <param name="search">Текст для поиска по названию или содержимому (можно не указывать)</param>
     public async Task<PagedResponse<LectureListDto>> GetAllAsync(int page, int pageSize, string? search = null)
     {
         using var connection = db.CreateConnection();
@@ -86,6 +96,10 @@ public class LectureService(IDbConnectionFactory db) : ILectureService
         };
     }
 
+    /// <summary>
+    /// Создаёт новую лекцию и при необходимости сохраняет пути к видео и документу
+    /// </summary>
+    /// <param name="request">Данные новой лекции: название, текст, пути к файлам</param>
     public async Task<LectureDto?> CreateAsync(CreateLectureRequest request)
     {
         using var connection = db.CreateConnection();
@@ -117,6 +131,11 @@ public class LectureService(IDbConnectionFactory db) : ILectureService
         }
     }
 
+    /// <summary>
+    /// Обновляет существующую лекцию: меняет только те поля, что переданы
+    /// </summary>
+    /// <param name="id">Номер (id) лекции, которую нужно изменить</param>
+    /// <param name="request">Новые данные лекции (поля, которые надо обновить)</param>
     public async Task<bool> UpdateAsync(int id, UpdateLectureRequest request)
     {
         using var connection = db.CreateConnection();
@@ -166,6 +185,10 @@ public class LectureService(IDbConnectionFactory db) : ILectureService
         }
     }
 
+    /// <summary>
+    /// Удаляет лекцию по её номеру вместе со связанными путями к файлам
+    /// </summary>
+    /// <param name="id">Номер (id) лекции, которую нужно удалить</param>
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = db.CreateConnection();

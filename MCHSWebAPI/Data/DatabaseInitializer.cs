@@ -1,12 +1,24 @@
 ﻿using Dapper;
 
 namespace MCHSWebAPI.Data;
+
+/// <summary>
+/// Подготавливает базу данных при запуске приложения:
+/// обновляет схему, создаёт стандартных админов и наполняет демо-данными
+/// </summary>
 public static class DatabaseInitializer
 {
     private const string DefaultAdminUsername = "admin";
     private const string DefaultAdminPassword = "admin123";
     private const string DefaultSuperAdminUsername = "superadmin";
     private const string DefaultSuperAdminPassword = "superadmin123";
+
+    /// <summary>
+    /// Обновляет схему базы: добавляет недостающие столбцы (ФИО), индекс по почте
+    /// и роль суперадмина. Все ошибки только записываются в лог
+    /// </summary>
+    /// <param name="factory">Фабрика для создания подключения к базе</param>
+    /// <param name="logger">Журнал для записи ошибок (можно не указывать)</param>
     public static async Task MigrateSchemaAsync(IDbConnectionFactory factory, ILogger? logger = null)
     {
         try
@@ -28,6 +40,12 @@ public static class DatabaseInitializer
         }
     }
 
+    /// <summary>
+    /// Создаёт стандартные аккаунты администратора и суперадминистратора,
+    /// если их ещё нет в базе
+    /// </summary>
+    /// <param name="factory">Фабрика для создания подключения к базе</param>
+    /// <param name="logger">Журнал для записи ошибок (можно не указывать)</param>
     public static async Task EnsureDefaultAdminAsync(IDbConnectionFactory factory, ILogger? logger = null)
     {
         try
@@ -48,6 +66,15 @@ public static class DatabaseInitializer
         }
     }
 
+    /// <summary>
+    /// Создаёт одного стандартного пользователя с заданной ролью, если его ещё нет.
+    /// Пароль сохраняется в зашифрованном виде
+    /// </summary>
+    /// <param name="connection">Открытое подключение к базе данных</param>
+    /// <param name="roleName">Название роли пользователя (например, "admin")</param>
+    /// <param name="username">Логин создаваемого пользователя</param>
+    /// <param name="password">Пароль создаваемого пользователя</param>
+    /// <param name="logger">Журнал для записи сообщений (можно не указывать)</param>
     private static async Task EnsureDefaultUserAsync(
         System.Data.IDbConnection connection,
         string roleName, string username, string password, ILogger? logger)
@@ -79,6 +106,12 @@ public static class DatabaseInitializer
             "Создан дефолтный {Role}: {User} / {Pass}. Рекомендуется сменить пароль.",
             roleName, username, password);
     }
+    /// <summary>
+    /// Наполняет базу демонстрационными данными: 3 лекции, 3 теста и вопросы к ним.
+    /// Уже существующие записи не дублируются
+    /// </summary>
+    /// <param name="factory">Фабрика для создания подключения к базе</param>
+    /// <param name="logger">Журнал для записи сообщений (можно не указывать)</param>
     public static async Task SeedSampleDataAsync(IDbConnectionFactory factory, ILogger? logger = null)
     {
         try
@@ -233,6 +266,14 @@ public static class DatabaseInitializer
         }
     }
 
+    /// <summary>
+    /// Добавляет лекцию, если её ещё нет, и возвращает её номер.
+    /// Если лекция с таким названием уже есть — возвращает её номер
+    /// </summary>
+    /// <param name="conn">Открытое подключение к базе данных</param>
+    /// <param name="tx">Транзакция, в рамках которой выполняется вставка</param>
+    /// <param name="title">Название лекции</param>
+    /// <param name="content">Текст лекции</param>
     private static async Task<int> EnsureLectureAsync(
         System.Data.IDbConnection conn, System.Data.IDbTransaction tx,
         string title, string content)
@@ -247,6 +288,18 @@ public static class DatabaseInitializer
             new { Title = title, Text = content }, tx);
     }
 
+    /// <summary>
+    /// Добавляет тест, если его ещё нет, и возвращает его номер.
+    /// Если тест с таким названием уже есть — возвращает его номер
+    /// </summary>
+    /// <param name="conn">Открытое подключение к базе данных</param>
+    /// <param name="tx">Транзакция, в рамках которой выполняется вставка</param>
+    /// <param name="lectureId">Номер лекции, к которой привязан тест</param>
+    /// <param name="title">Название теста</param>
+    /// <param name="description">Описание теста</param>
+    /// <param name="timeLimit">Ограничение по времени в минутах (можно не указывать)</param>
+    /// <param name="passingScore">Проходной балл</param>
+    /// <param name="createdBy">Номер пользователя, который создаёт тест</param>
     private static async Task<int> InsertTestAsync(
         System.Data.IDbConnection conn, System.Data.IDbTransaction tx,
         int lectureId, string title, string description, int? timeLimit, int passingScore, int createdBy)
@@ -271,6 +324,16 @@ public static class DatabaseInitializer
             }, tx);
     }
 
+    /// <summary>
+    /// Добавляет в тест вопрос вместе с вариантами ответов.
+    /// Если такой вопрос в тесте уже есть — ничего не делает
+    /// </summary>
+    /// <param name="conn">Открытое подключение к базе данных</param>
+    /// <param name="tx">Транзакция, в рамках которой выполняется вставка</param>
+    /// <param name="testId">Номер теста, в который добавляем вопрос</param>
+    /// <param name="position">Порядковый номер вопроса в тесте</param>
+    /// <param name="questionText">Текст вопроса</param>
+    /// <param name="answers">Список ответов: текст и признак правильности</param>
     private static async Task InsertQuestionWithAnswersAsync(
         System.Data.IDbConnection conn, System.Data.IDbTransaction tx,
         int testId, int position, string questionText, (string Text, bool IsCorrect)[] answers)

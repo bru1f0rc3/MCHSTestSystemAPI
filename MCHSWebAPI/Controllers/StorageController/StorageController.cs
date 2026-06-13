@@ -5,12 +5,19 @@ using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.StorageController;
 
+/// <summary>
+/// Контроллер файлового хранилища: просмотр, загрузка и отдача файлов
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class StorageController : ControllerBase
 {
     private readonly IStorageService _storage;
 
+    /// <summary>
+    /// Создаёт контроллер и получает сервис хранилища
+    /// </summary>
+    /// <param name="storage">Сервис для работы с файловым хранилищем</param>
     public StorageController(IStorageService storage)
     {
         _storage = storage;
@@ -20,6 +27,7 @@ public class StorageController : ControllerBase
     /// Просмотр серверной папки хранилища. Только админам.
     /// type: "video" — список видео, "document" — список PDF.
     /// </summary>
+    /// <param name="type">Тип файлов: "video" или "document"</param>
     [HttpGet("browse")]
     [Authorize(Roles = "admin,superadmin")]
     public ActionResult<ApiResponse<List<StorageFileDto>>> Browse([FromQuery] string type = "video")
@@ -32,6 +40,8 @@ public class StorageController : ControllerBase
     /// Загрузка файла в серверное хранилище с устройства. Только админам.
     /// type: "video" — в папку videos, "document" — в documents.
     /// </summary>
+    /// <param name="type">Тип файла: "video" или "document"</param>
+    /// <param name="file">Загружаемый файл</param>
     [HttpPost("upload")]
     [Authorize(Roles = "admin,superadmin")]
     [DisableRequestSizeLimit]
@@ -54,6 +64,7 @@ public class StorageController : ControllerBase
     /// Отдаёт файл из хранилища по относительному пути с поддержкой Range
     /// (нужно для перемотки видео встроенным плеером).
     /// </summary>
+    /// <param name="path">Относительный путь к файлу внутри хранилища</param>
     [HttpGet("file")]
     [AllowAnonymous]
     public IActionResult GetFile([FromQuery] string path)

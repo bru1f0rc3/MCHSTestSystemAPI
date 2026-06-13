@@ -5,10 +5,17 @@ using MCHSWebAPI.Interfaces;
 
 namespace MCHSWebAPI.Controllers.AuthController;
 
+/// <summary>
+/// Контроллер авторизации: вход, регистрация, гостевой доступ и профиль
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController(IAuthService authService) : AuthorizedControllerBase
 {
+    /// <summary>
+    /// Вход по логину и паролю. При успехе возвращает токен
+    /// </summary>
+    /// <param name="request">Логин и пароль пользователя</param>
     [HttpPost("login")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Login([FromBody] LoginRequest request)
     {
@@ -19,6 +26,10 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         return Ok(ApiResponse<AuthResponse>.Ok(result, "Вход выполнен успешно"));
     }
 
+    /// <summary>
+    /// Регистрация нового пользователя
+    /// </summary>
+    /// <param name="request">Данные для регистрации: логин, пароль, ФИО, id устройства</param>
     [HttpPost("register")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> Register([FromBody] RegisterRequest request)
     {
@@ -37,6 +48,10 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         }
     }
 
+    /// <summary>
+    /// Создаёт гостевой аккаунт для устройства
+    /// </summary>
+    /// <param name="request">Данные запроса с идентификатором устройства</param>
     [HttpPost("guest")]
     public async Task<ActionResult<ApiResponse<AuthResponse>>> RegisterGuest([FromBody] GuestRegisterRequest request)
     {
@@ -47,6 +62,10 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         return Ok(ApiResponse<AuthResponse>.Ok(result, "Гостевой аккаунт создан"));
     }
 
+    /// <summary>
+    /// Проверяет, есть ли на устройстве аккаунт и гостевой ли он
+    /// </summary>
+    /// <param name="request">Данные запроса с идентификатором устройства</param>
     [HttpPost("guest/status")]
     public async Task<ActionResult<ApiResponse<GuestStatusResponse>>> GuestStatus([FromBody] GuestStatusRequest request)
     {
@@ -54,6 +73,10 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         return Ok(ApiResponse<GuestStatusResponse>.Ok(status));
     }
 
+    /// <summary>
+    /// Меняет пароль текущего пользователя
+    /// </summary>
+    /// <param name="request">Старый и новый пароль</param>
     [Authorize]
     [HttpPost("change-password")]
     public async Task<ActionResult<ApiResponse<bool>>> ChangePassword([FromBody] ChangePasswordRequest request)
@@ -72,6 +95,9 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         }
     }
 
+    /// <summary>
+    /// Возвращает профиль текущего пользователя
+    /// </summary>
     [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<ApiResponse<UserProfileResponse>>> GetCurrentUser()
@@ -83,6 +109,10 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         return Ok(ApiResponse<UserProfileResponse>.Ok(profile));
     }
 
+    /// <summary>
+    /// Обновляет ФИО в профиле текущего пользователя
+    /// </summary>
+    /// <param name="request">Новые данные профиля: фамилия, имя, отчество</param>
     [Authorize]
     [HttpPut("me")]
     public async Task<ActionResult<ApiResponse<UserProfileResponse>>> UpdateProfile(
@@ -94,6 +124,9 @@ public class AuthController(IAuthService authService) : AuthorizedControllerBase
         return Ok(ApiResponse<UserProfileResponse>.Ok(profile, "Профиль обновлён"));
     }
 
+    /// <summary>
+    /// Удаляет аккаунт текущего пользователя
+    /// </summary>
     [Authorize]
     [HttpPost("delete-account")]
     public async Task<ActionResult<ApiResponse<bool>>> DeleteAccount()

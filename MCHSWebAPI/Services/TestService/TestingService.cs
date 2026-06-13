@@ -21,6 +21,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         JOIN tests t ON tr.test_id = t.id
         LEFT JOIN lectures l ON t.lecture_id = l.id";
 
+    /// <summary>
+    /// Начинает прохождение теста. Если тест уже начат и не завершён —
+    /// возвращает его, иначе создаёт новую попытку
+    /// </summary>
+    /// <param name="testId">Номер (id) теста, который начинают</param>
+    /// <param name="userId">Номер пользователя, который проходит тест</param>
     public async Task<StartTestResponse?> StartTestAsync(int testId, int userId)
     {
         var existing = await GetInProgressResult(userId, testId);
@@ -43,7 +49,13 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return BuildStartResponse(testResultId, test, startedAt);
     }
 
-    // Возобновление незавершённого теста — используется только внутри StartTestAsync.
+    /// <summary>
+    /// Возобновляет незавершённый тест. Если время уже вышло —
+    /// автоматически завершает попытку и считает результат.
+    /// Используется только внутри StartTestAsync
+    /// </summary>
+    /// <param name="testId">Номер (id) теста, который возобновляют</param>
+    /// <param name="userId">Номер пользователя, который проходит тест</param>
     private async Task<StartTestResponse?> GetInProgressTestAsync(int testId, int userId)
     {
         var result = await GetInProgressResult(userId, testId);
@@ -60,6 +72,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return BuildStartResponse(result.Id, test, result.StartedAt);
     }
 
+    /// <summary>
+    /// Сохраняет один ответ пользователя на вопрос во время прохождения теста
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, который отвечает</param>
+    /// <param name="request">Данные ответа: номер вопроса и номер выбранного ответа</param>
     public async Task<bool> SubmitAnswerAsync(int testResultId, int userId, SubmitAnswerRequest request)
     {
         using var connection = db.CreateConnection();
@@ -102,6 +120,13 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return true;
     }
 
+    /// <summary>
+    /// Сохраняет сразу несколько ответов пользователя
+    /// (старые ответы на эти вопросы при этом перезаписываются)
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, который отвечает</param>
+    /// <param name="request">Список ответов: для каждого вопроса выбранные варианты</param>
     public async Task<bool> SubmitAnswersAsync(int testResultId, int userId, SubmitAnswersRequest request)
     {
         using var connection = db.CreateConnection();
@@ -148,6 +173,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return true;
     }
 
+    /// <summary>
+    /// Завершает тест: подсчитывает итоговый балл и возвращает результат
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, который завершает тест</param>
     public async Task<FinishTestResponse?> FinishTestAsync(int testResultId, int userId)
     {
         var testResult = await GetTestResultWithDetails(testResultId);
@@ -164,6 +194,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return await BuildFinishResponse(testResultId, testResult);
     }
 
+    /// <summary>
+    /// Возвращает краткий результат прохождения теста (балл, статус и т.п.)
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, чей результат запрашивают</param>
     public async Task<TestResultDto?> GetTestResultAsync(int testResultId, int userId)
     {
         var testResult = await GetTestResultWithDetails(testResultId);
@@ -173,6 +208,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return MapToDto(testResult);
     }
 
+    /// <summary>
+    /// Возвращает подробный результат теста: по каждому вопросу видно,
+    /// что ответил пользователь, какой ответ верный и правильно ли он ответил
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, чей результат запрашивают</param>
     public async Task<TestResultDetailDto?> GetTestResultDetailAsync(int testResultId, int userId)
     {
         var testResult = await GetTestResultWithDetails(testResultId);
@@ -204,6 +245,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         };
     }
 
+    /// <summary>
+    /// Возвращает результаты тестов одного пользователя по страницам
+    /// </summary>
+    /// <param name="userId">Номер пользователя, чьи результаты нужны</param>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько результатов помещается на одной странице</param>
     public async Task<PagedResponse<TestResultDto>> GetUserResultsAsync(int userId, int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -228,6 +275,15 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         };
     }
 
+    /// <summary>
+    /// Возвращает результаты всех пользователей по страницам
+    /// с возможностью фильтра по датам и поиском по имени или названию теста
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько результатов помещается на одной странице</param>
+    /// <param name="startDate">Начало периода (можно не указывать)</param>
+    /// <param name="endDate">Конец периода (можно не указывать)</param>
+    /// <param name="searchQuery">Текст для поиска по логину или названию теста (можно не указывать)</param>
     public async Task<PagedResponse<TestResultDto>> GetAllResultsAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchQuery = null)
     {
         using var connection = db.CreateConnection();
@@ -260,6 +316,13 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         };
     }
 
+    /// <summary>
+    /// Фиксирует попытку списывания: увеличивает счётчик и записывает событие
+    /// (например, когда пользователь свернул приложение во время теста)
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="userId">Номер пользователя, который проходит тест</param>
+    /// <param name="request">Данные о нарушении: тип события и подробности</param>
     public async Task<bool> RegisterCheatAttemptAsync(int testResultId, int userId, ReportCheatAttemptRequest request)
     {
         using var connection = db.CreateConnection();
@@ -299,12 +362,24 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
     }
 
 
+    /// <summary>
+    /// Проверяет, не вышло ли время на прохождение теста
+    /// (с небольшим запасом в 3 секунды)
+    /// </summary>
+    /// <param name="startedAt">Время начала прохождения теста</param>
+    /// <param name="timeLimitMinutes">Лимит времени в минутах (если не задан — без ограничения)</param>
     private static bool IsTimedOut(DateTime startedAt, int? timeLimitMinutes)
     {
         if (!timeLimitMinutes.HasValue || timeLimitMinutes.Value <= 0) return false;
         return DateTime.UtcNow > startedAt.AddMinutes(timeLimitMinutes.Value).AddSeconds(3);
     }
 
+    /// <summary>
+    /// Подсчитывает итоговый балл за тест и сохраняет его,
+    /// помечая попытку как завершённую
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="autoSubmitted">true — тест завершён автоматически (например, по времени), false — вручную</param>
     private async Task CalculateAndStoreScore(int testResultId, bool autoSubmitted)
     {
         using var connection = db.CreateConnection();
@@ -335,6 +410,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             new { Id = testResultId, FinishedAt = DateTime.UtcNow, Score = score, AutoSubmitted = autoSubmitted });
     }
 
+    /// <summary>
+    /// Загружает данные попытки теста, нужные при сохранении ответа
+    /// (кто проходит, какой тест и лимит времени)
+    /// </summary>
+    /// <param name="connection">Открытое подключение к базе данных</param>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
     private async Task<TestResult?> LoadResultForSubmit(System.Data.IDbConnection connection, int testResultId)
     {
         return await connection.QueryFirstOrDefaultAsync<TestResult>(
@@ -347,6 +428,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             new { Id = testResultId });
     }
 
+    /// <summary>
+    /// Ищет незавершённую попытку прохождения теста у пользователя
+    /// </summary>
+    /// <param name="userId">Номер пользователя</param>
+    /// <param name="testId">Номер (id) теста</param>
     private async Task<TestResult?> GetInProgressResult(int userId, int testId)
     {
         using var connection = db.CreateConnection();
@@ -361,6 +447,10 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             new { UserId = userId, TestId = testId });
     }
 
+    /// <summary>
+    /// Загружает тест вместе со всеми его вопросами и вариантами ответов
+    /// </summary>
+    /// <param name="testId">Номер (id) теста, который нужно загрузить</param>
     private async Task<Test?> GetTestWithQuestions(int testId)
     {
         using var connection = db.CreateConnection();
@@ -400,6 +490,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return test;
     }
 
+    /// <summary>
+    /// Загружает попытку теста со всеми подробностями
+    /// (логин, название теста, балл, статус и т.д.)
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
     private async Task<TestResult?> GetTestResultWithDetails(int testResultId)
     {
         using var connection = db.CreateConnection();
@@ -408,6 +503,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             new { Id = testResultId });
     }
 
+    /// <summary>
+    /// Собирает правильные ответы для списка вопросов
+    /// (возвращает: номер вопроса — список его правильных ответов)
+    /// </summary>
+    /// <param name="questionIds">Номера вопросов, для которых нужны правильные ответы</param>
     private async Task<Dictionary<int, List<Answer>>> GetCorrectAnswersMap(List<int> questionIds)
     {
         if (questionIds.Count == 0) return new Dictionary<int, List<Answer>>();
@@ -424,6 +524,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             .ToDictionary(g => g.Key, g => g.ToList());
     }
 
+    /// <summary>
+    /// Собирает правильные ответы одного вопроса в одну строку через запятую
+    /// </summary>
+    /// <param name="map">Словарь с правильными ответами по вопросам</param>
+    /// <param name="questionId">Номер вопроса, ответы которого нужно показать</param>
     private static string FormatCorrectAnswers(Dictionary<int, List<Answer>> map, int questionId)
     {
         if (!map.TryGetValue(questionId, out var answers) || answers.Count == 0)
@@ -431,6 +536,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return string.Join(", ", answers.Select(a => a.AnswerText));
     }
 
+    /// <summary>
+    /// Загружает все ответы, которые пользователь дал в этой попытке теста
+    /// </summary>
+    /// <param name="connection">Открытое подключение к базе данных</param>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
     private async Task<List<UserAnswer>> GetUserAnswersForResult(System.Data.IDbConnection connection, int testResultId)
     {
         return (await connection.QueryAsync<UserAnswer>(
@@ -444,6 +554,13 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
             new { TestResultId = testResultId })).ToList();
     }
 
+    /// <summary>
+    /// Проверяет ответы пользователя: считает, сколько вопросов решено верно,
+    /// и формирует подробный разбор по каждому вопросу.
+    /// Вопрос засчитан, только если выбраны ровно все правильные ответы
+    /// </summary>
+    /// <param name="userAnswers">Ответы, которые дал пользователь</param>
+    /// <param name="correctAnswersMap">Правильные ответы по каждому вопросу</param>
     private static (int CorrectCount, List<QuestionResultDto> Results) EvaluateQuestionResults(
         List<UserAnswer> userAnswers,
         Dictionary<int, List<Answer>> correctAnswersMap)
@@ -474,6 +591,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         return (correctCount, results);
     }
 
+    /// <summary>
+    /// Готовит итоговый ответ о завершении теста:
+    /// балл, статус (сдал/не сдал), число верных ответов и разбор по вопросам
+    /// </summary>
+    /// <param name="testResultId">Номер попытки прохождения теста</param>
+    /// <param name="testResult">Данные попытки теста из базы</param>
     private async Task<FinishTestResponse> BuildFinishResponse(int testResultId, TestResult testResult)
     {
         using var connection = db.CreateConnection();
@@ -505,6 +628,12 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         };
     }
 
+    /// <summary>
+    /// Готовит ответ для начала теста: список вопросов, время и крайний срок
+    /// </summary>
+    /// <param name="testResultId">Номер созданной попытки прохождения теста</param>
+    /// <param name="test">Тест с вопросами и ответами</param>
+    /// <param name="startedAt">Время начала прохождения теста</param>
     private static StartTestResponse BuildStartResponse(int testResultId, Test test, DateTime startedAt)
     {
         return new StartTestResponse
@@ -520,6 +649,11 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         };
     }
 
+    /// <summary>
+    /// Превращает вопросы в формат для прохождения теста
+    /// (без указания правильных ответов, чтобы их не было видно)
+    /// </summary>
+    /// <param name="questions">Список вопросов теста (может быть пустым)</param>
     private static List<TestQuestionDto> MapQuestions(IEnumerable<Question>? questions)
     {
         return questions?.Select(q => new TestQuestionDto
@@ -537,6 +671,10 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         }).ToList() ?? [];
     }
 
+    /// <summary>
+    /// Превращает результат теста из базы в объект для отправки клиенту (DTO)
+    /// </summary>
+    /// <param name="result">Результат теста, прочитанный из базы данных</param>
     private static TestResultDto MapToDto(TestResult result) => new()
     {
         Id = result.Id,
@@ -554,6 +692,13 @@ public class TestingService(IDbConnectionFactory db) : ITestingService
         Status = result.Status ?? "unknown"
     };
 
+    /// <summary>
+    /// Собирает условие WHERE для запроса всех результатов
+    /// из заданных фильтров (даты и строка поиска)
+    /// </summary>
+    /// <param name="startDate">Начало периода (можно не указывать)</param>
+    /// <param name="endDate">Конец периода (можно не указывать)</param>
+    /// <param name="searchQuery">Текст для поиска по логину или названию теста (можно не указывать)</param>
     private static (string Where, DynamicParameters Params) BuildAllResultsFilter(DateTime? startDate, DateTime? endDate, string? searchQuery)
     {
         var conditions = new List<string> { "1=1" };

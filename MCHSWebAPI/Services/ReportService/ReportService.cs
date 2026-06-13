@@ -15,6 +15,10 @@ public class ReportService(IDbConnectionFactory db) : IReportService
                u.username as CreatorUsername
         FROM reports r JOIN users u ON r.created_by = u.id";
 
+    /// <summary>
+    /// Находит один отчёт по его номеру
+    /// </summary>
+    /// <param name="id">Номер (id) отчёта, который нужно найти</param>
     public async Task<ReportDto?> GetByIdAsync(int id)
     {
         using var connection = db.CreateConnection();
@@ -23,6 +27,11 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         return report == null ? null : MapToDto(report);
     }
 
+    /// <summary>
+    /// Возвращает список отчётов по страницам (постранично)
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько отчётов помещается на одной странице</param>
     public async Task<PagedResponse<ReportDto>> GetAllAsync(int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -43,6 +52,11 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         };
     }
 
+    /// <summary>
+    /// Создаёт новый отчёт со статистикой и сохраняет его в базу
+    /// </summary>
+    /// <param name="request">Данные для отчёта: заголовок, описание, период и фильтры</param>
+    /// <param name="createdBy">Номер пользователя, который создаёт отчёт</param>
     public async Task<ReportDto?> CreateAsync(CreateReportRequest request, int createdBy)
     {
         using var connection = db.CreateConnection();
@@ -71,12 +85,20 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         return await GetByIdAsync(reportId);
     }
 
+    /// <summary>
+    /// Удаляет отчёт по его номеру
+    /// </summary>
+    /// <param name="id">Номер (id) отчёта, который нужно удалить</param>
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM reports WHERE id = @Id", new { Id = id }) > 0;
     }
 
+    /// <summary>
+    /// Собирает общую статистику для главной страницы (дашборда):
+    /// сколько всего пользователей, тестов, лекций и как их проходят
+    /// </summary>
     public async Task<DashboardDto> GetDashboardAsync()
     {
         using var connection = db.CreateConnection();
@@ -115,6 +137,10 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         return dashboard;
     }
 
+    /// <summary>
+    /// Возвращает статистику по каждому тесту:
+    /// сколько было попыток, сколько пройдено и средний балл
+    /// </summary>
     public async Task<IEnumerable<TestStatisticsDto>> GetTestStatisticsAsync()
     {
         using var connection = db.CreateConnection();
@@ -138,6 +164,11 @@ public class ReportService(IDbConnectionFactory db) : IReportService
               ORDER BY t.title");
     }
 
+    /// <summary>
+    /// Возвращает статистику по одному пользователю:
+    /// сколько тестов он прошёл, сколько сдал и его средний балл
+    /// </summary>
+    /// <param name="userId">Номер пользователя, по которому нужна статистика</param>
     public async Task<UserStatisticsDto?> GetUserStatisticsAsync(int userId)
     {
         using var connection = db.CreateConnection();
@@ -163,6 +194,12 @@ public class ReportService(IDbConnectionFactory db) : IReportService
             new { UserId = userId });
     }
 
+    /// <summary>
+    /// Возвращает список пользователей с их результатами (по страницам):
+    /// сколько тестов пройдено, средний балл и когда была последняя активность
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько пользователей помещается на одной странице</param>
     public async Task<PagedResponse<UserPerformanceDto>> GetUsersPerformanceAsync(int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -200,6 +237,14 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         };
     }
 
+    /// <summary>
+    /// Строит подробный отчёт по результатам тестов с возможностью фильтрации
+    /// по датам, пользователю и тесту
+    /// </summary>
+    /// <param name="startDate">Начало периода (можно не указывать)</param>
+    /// <param name="endDate">Конец периода (можно не указывать)</param>
+    /// <param name="userId">Номер пользователя для фильтра (можно не указывать)</param>
+    /// <param name="testId">Номер теста для фильтра (можно не указывать)</param>
     public async Task<DetailedReportDto> GetDetailedReportAsync(
         DateTime? startDate, DateTime? endDate, int? userId, int? testId)
     {
@@ -271,6 +316,13 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         };
     }
 
+    /// <summary>
+    /// Определяет вид отчёта (по тесту, по дате, за период или общий)
+    /// в зависимости от того, какие фильтры заданы
+    /// </summary>
+    /// <param name="start">Начало периода (можно не указывать)</param>
+    /// <param name="end">Конец периода (можно не указывать)</param>
+    /// <param name="testId">Номер теста для фильтра (можно не указывать)</param>
     private static string ResolveKind(DateTime? start, DateTime? end, int? testId)
     {
         bool hasTest = testId.HasValue;
@@ -284,6 +336,14 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         return "all";
     }
 
+    /// <summary>
+    /// Собирает условие WHERE для SQL-запроса из заданных фильтров
+    /// (даты, тест, пользователь)
+    /// </summary>
+    /// <param name="from">Начало периода (можно не указывать)</param>
+    /// <param name="to">Конец периода (можно не указывать)</param>
+    /// <param name="testId">Номер теста для фильтра (можно не указывать)</param>
+    /// <param name="userId">Номер пользователя для фильтра (можно не указывать)</param>
     private static (string Where, DynamicParameters Params) BuildReportFilter(
         DateTime? from, DateTime? to, int? testId, int? userId = null)
     {
@@ -298,6 +358,14 @@ public class ReportService(IDbConnectionFactory db) : IReportService
         return (string.Join(" AND ", conditions), parameters);
     }
 
+    /// <summary>
+    /// Считает общую статистику (попытки, средний балл, сдано/не сдано)
+    /// с учётом заданных фильтров — нужна при создании отчёта
+    /// </summary>
+    /// <param name="from">Начало периода (можно не указывать)</param>
+    /// <param name="to">Конец периода (можно не указывать)</param>
+    /// <param name="testId">Номер теста для фильтра (можно не указывать)</param>
+    /// <param name="userId">Номер пользователя для фильтра (можно не указывать)</param>
     private async Task<ReportStatistics> GetStatistics(DateTime? from, DateTime? to, int? testId, int? userId)
     {
         using var connection = db.CreateConnection();
@@ -317,6 +385,13 @@ public class ReportService(IDbConnectionFactory db) : IReportService
               {where}", parameters);
     }
 
+    /// <summary>
+    /// Считает статистику по каждому пользователю с учётом фильтров —
+    /// нужна при создании отчёта
+    /// </summary>
+    /// <param name="from">Начало периода (можно не указывать)</param>
+    /// <param name="to">Конец периода (можно не указывать)</param>
+    /// <param name="testId">Номер теста для фильтра (можно не указывать)</param>
     private async Task<IEnumerable<UserStatistics>> GetUserStatisticsForReport(DateTime? from, DateTime? to, int? testId)
     {
         using var connection = db.CreateConnection();
@@ -339,6 +414,10 @@ public class ReportService(IDbConnectionFactory db) : IReportService
               ORDER BY u.username", parameters);
     }
 
+    /// <summary>
+    /// Превращает отчёт из базы в объект для отправки клиенту (DTO)
+    /// </summary>
+    /// <param name="report">Отчёт, прочитанный из базы данных</param>
     private static ReportDto MapToDto(Report report)
     {
         ReportContent? content = null;

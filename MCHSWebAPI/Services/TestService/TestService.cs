@@ -19,6 +19,10 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         LEFT JOIN lectures l ON t.lecture_id = l.id
         JOIN users u ON t.created_by = u.id";
 
+    /// <summary>
+    /// Находит один тест по его номеру и считает количество вопросов в нём
+    /// </summary>
+    /// <param name="id">Номер (id) теста, который нужно найти</param>
     public async Task<TestDto?> GetByIdAsync(int id)
     {
         using var connection = db.CreateConnection();
@@ -33,6 +37,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         return ToDto(test, questionsCount);
     }
 
+    /// <summary>
+    /// Находит тест по номеру вместе со всеми его вопросами и вариантами ответов
+    /// </summary>
+    /// <param name="id">Номер (id) теста, который нужно найти</param>
+    /// <param name="includeCorrectAnswers">Показывать ли, какие ответы правильные (true — да, false — скрыть)</param>
     public async Task<TestDetailDto?> GetByIdWithQuestionsAsync(int id, bool includeCorrectAnswers)
     {
         using var connection = db.CreateConnection();
@@ -88,6 +97,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         };
     }
 
+    /// <summary>
+    /// Возвращает список всех тестов по страницам
+    /// </summary>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько тестов помещается на одной странице</param>
     public async Task<PagedResponse<TestDto>> GetAllAsync(int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -114,6 +128,12 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         };
     }
 
+    /// <summary>
+    /// Возвращает тесты, которые пользователь ещё не сдал, по страницам
+    /// </summary>
+    /// <param name="userId">Номер пользователя, для которого ищем доступные тесты</param>
+    /// <param name="page">Номер страницы, которую нужно показать</param>
+    /// <param name="pageSize">Сколько тестов помещается на одной странице</param>
     public async Task<PagedResponse<TestDto>> GetAvailableForUserAsync(int userId, int page, int pageSize)
     {
         using var connection = db.CreateConnection();
@@ -149,6 +169,10 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         };
     }
 
+    /// <summary>
+    /// Возвращает все тесты, привязанные к одной лекции
+    /// </summary>
+    /// <param name="lectureId">Номер (id) лекции, тесты которой нужны</param>
     public async Task<IEnumerable<TestDto>> GetByLectureIdAsync(int lectureId)
     {
         using var connection = db.CreateConnection();
@@ -163,6 +187,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         return tests.Select(t => ToDto(t, counts.GetValueOrDefault(t.Id, 0)));
     }
 
+    /// <summary>
+    /// Создаёт новый тест вместе со всеми его вопросами и ответами
+    /// </summary>
+    /// <param name="request">Данные теста: название, описание, вопросы и ответы</param>
+    /// <param name="createdBy">Номер пользователя, который создаёт тест</param>
     public async Task<TestDto?> CreateAsync(CreateTestRequest request, int createdBy)
     {
         using var connection = db.CreateConnection();
@@ -212,6 +241,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         }
     }
 
+    /// <summary>
+    /// Обновляет тест: меняет только те поля, что переданы
+    /// </summary>
+    /// <param name="id">Номер (id) теста, который нужно изменить</param>
+    /// <param name="request">Новые данные теста (поля, которые надо обновить)</param>
     public async Task<bool> UpdateAsync(int id, UpdateTestRequest request)
     {
         using var connection = db.CreateConnection();
@@ -235,12 +269,21 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         return await connection.ExecuteAsync(sql, parameters) > 0;
     }
 
+    /// <summary>
+    /// Удаляет тест по его номеру
+    /// </summary>
+    /// <param name="id">Номер (id) теста, который нужно удалить</param>
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM tests WHERE id = @Id", new { Id = id }) > 0;
     }
 
+    /// <summary>
+    /// Добавляет в тест новый вопрос вместе с вариантами ответов
+    /// </summary>
+    /// <param name="testId">Номер (id) теста, в который добавляем вопрос</param>
+    /// <param name="request">Данные вопроса: текст, позиция и список ответов</param>
     public async Task<QuestionDto?> AddQuestionAsync(int testId, CreateQuestionRequest request)
     {
         using var connection = db.CreateConnection();
@@ -300,6 +343,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         }
     }
 
+    /// <summary>
+    /// Обновляет текст или позицию вопроса
+    /// </summary>
+    /// <param name="questionId">Номер (id) вопроса, который нужно изменить</param>
+    /// <param name="request">Новые данные вопроса (поля, которые надо обновить)</param>
     public async Task<bool> UpdateQuestionAsync(int questionId, UpdateQuestionRequest request)
     {
         using var connection = db.CreateConnection();
@@ -316,12 +364,21 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
             question) > 0;
     }
 
+    /// <summary>
+    /// Удаляет вопрос по его номеру
+    /// </summary>
+    /// <param name="questionId">Номер (id) вопроса, который нужно удалить</param>
     public async Task<bool> DeleteQuestionAsync(int questionId)
     {
         using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM questions WHERE id = @Id", new { Id = questionId }) > 0;
     }
 
+    /// <summary>
+    /// Добавляет новый вариант ответа к вопросу
+    /// </summary>
+    /// <param name="questionId">Номер (id) вопроса, к которому добавляем ответ</param>
+    /// <param name="request">Данные ответа: текст, правильность и позиция</param>
     public async Task<AnswerDto?> AddAnswerAsync(int questionId, CreateAnswerRequest request)
     {
         using var connection = db.CreateConnection();
@@ -343,6 +400,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         };
     }
 
+    /// <summary>
+    /// Обновляет вариант ответа: текст, правильность или позицию
+    /// </summary>
+    /// <param name="answerId">Номер (id) ответа, который нужно изменить</param>
+    /// <param name="request">Новые данные ответа (поля, которые надо обновить)</param>
     public async Task<bool> UpdateAnswerAsync(int answerId, UpdateAnswerRequest request)
     {
         using var connection = db.CreateConnection();
@@ -361,12 +423,25 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
             answer) > 0;
     }
 
+    /// <summary>
+    /// Удаляет вариант ответа по его номеру
+    /// </summary>
+    /// <param name="answerId">Номер (id) ответа, который нужно удалить</param>
     public async Task<bool> DeleteAnswerAsync(int answerId)
     {
         using var connection = db.CreateConnection();
         return await connection.ExecuteAsync("DELETE FROM answers WHERE id = @Id", new { Id = answerId }) > 0;
     }
 
+    /// <summary>
+    /// Создаёт новый тест, прочитав вопросы и ответы из загруженного PDF-файла
+    /// </summary>
+    /// <param name="lectureId">Номер (id) лекции, к которой привязываем тест</param>
+    /// <param name="title">Название будущего теста</param>
+    /// <param name="description">Описание теста (можно не указывать)</param>
+    /// <param name="timeLimitMinutes">Ограничение по времени в минутах (можно не указывать)</param>
+    /// <param name="pdfStream">Поток с содержимым PDF-файла</param>
+    /// <param name="createdBy">Номер пользователя, который создаёт тест</param>
     public async Task<TestDto?> ImportFromPdfAsync(int lectureId, string title, string? description, int? timeLimitMinutes, Stream pdfStream, int createdBy)
     {
         var parsedData = await pdfParserService.ParseTestFromPdfAsync(pdfStream);
@@ -415,6 +490,11 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         }
     }
 
+    /// <summary>
+    /// Превращает тест из базы в объект для отправки клиенту (DTO)
+    /// </summary>
+    /// <param name="test">Тест, прочитанный из базы данных</param>
+    /// <param name="questionsCount">Сколько вопросов в этом тесте</param>
     private static TestDto ToDto(Test test, int questionsCount) => new()
     {
         Id = test.Id,
@@ -429,6 +509,12 @@ public class TestService(IDbConnectionFactory db, IPdfParserService pdfParserSer
         QuestionsCount = questionsCount
     };
 
+    /// <summary>
+    /// Считает количество вопросов сразу для нескольких тестов
+    /// (возвращает: номер теста — число вопросов)
+    /// </summary>
+    /// <param name="connection">Открытое подключение к базе данных</param>
+    /// <param name="tests">Список тестов, для которых нужно посчитать вопросы</param>
     private static async Task<Dictionary<int, int>> LoadQuestionsCounts(System.Data.IDbConnection connection, IEnumerable<Test> tests)
     {
         var testIds = tests.Select(t => t.Id).ToArray();

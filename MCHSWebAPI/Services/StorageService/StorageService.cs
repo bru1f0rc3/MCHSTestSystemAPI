@@ -22,6 +22,12 @@ public class StorageService : IStorageService
 
     private readonly string _rootFull;
 
+    /// <summary>
+    /// Настраивает хранилище: определяет корневую папку
+    /// и создаёт папки для видео и документов, если их ещё нет
+    /// </summary>
+    /// <param name="config">Настройки приложения (откуда берётся путь к хранилищу)</param>
+    /// <param name="env">Сведения об окружении приложения (нужны для пути к папке)</param>
     public StorageService(IConfiguration config, IWebHostEnvironment env)
     {
         var configured = config["Storage:RootPath"];
@@ -39,6 +45,10 @@ public class StorageService : IStorageService
         Directory.CreateDirectory(Path.Combine(_rootFull, DocumentsFolder));
     }
 
+    /// <summary>
+    /// Возвращает список файлов в хранилище нужного типа (видео или документы)
+    /// </summary>
+    /// <param name="type">Тип файлов: "video" или "document"</param>
     public IReadOnlyList<StorageFileDto> Browse(string type)
     {
         var category = Categorize(type);
@@ -64,6 +74,12 @@ public class StorageService : IStorageService
             .ToList();
     }
 
+    /// <summary>
+    /// Превращает относительный путь в реальный путь к файлу на диске.
+    /// Проверяет, что файл лежит внутри хранилища и имеет разрешённое расширение,
+    /// иначе возвращает null
+    /// </summary>
+    /// <param name="relativePath">Относительный путь к файлу внутри хранилища</param>
     public string? ResolvePhysicalPath(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
@@ -91,6 +107,11 @@ public class StorageService : IStorageService
         return candidate;
     }
 
+    /// <summary>
+    /// Определяет тип содержимого файла (MIME-тип) по его пути.
+    /// Если определить не удалось — возвращает универсальный тип
+    /// </summary>
+    /// <param name="physicalPath">Путь к файлу на диске</param>
     public string GetContentType(string physicalPath)
     {
         return ContentTypeProvider.TryGetContentType(physicalPath, out var contentType)
@@ -98,6 +119,13 @@ public class StorageService : IStorageService
             : "application/octet-stream";
     }
 
+    /// <summary>
+    /// Сохраняет загруженный файл в нужную папку хранилища.
+    /// Делает имя безопасным и добавляет число, если такой файл уже есть
+    /// </summary>
+    /// <param name="type">Тип файла: "video" или "document"</param>
+    /// <param name="originalFileName">Исходное имя загруженного файла</param>
+    /// <param name="content">Поток с содержимым файла</param>
     public async Task<StorageFileDto?> SaveAsync(string type, string originalFileName, Stream content)
     {
         var category = Categorize(type);
@@ -131,6 +159,12 @@ public class StorageService : IStorageService
         };
     }
 
+    /// <summary>
+    /// Делает имя файла безопасным: убирает запрещённые символы.
+    /// Если имя оказалось пустым — использует "file"
+    /// </summary>
+    /// <param name="original">Исходное имя файла</param>
+    /// <param name="ext">Расширение файла (например, ".pdf")</param>
     private static string MakeSafeFileName(string original, string ext)
     {
         var baseName = Path.GetFileNameWithoutExtension(original);
@@ -141,6 +175,11 @@ public class StorageService : IStorageService
         return cleaned + ext;
     }
 
+    /// <summary>
+    /// Подбирает уникальный путь к файлу: если такой уже есть,
+    /// добавляет к имени число (_1, _2 и т.д.)
+    /// </summary>
+    /// <param name="fullPath">Желаемый полный путь к файлу</param>
     private static string EnsureUnique(string fullPath)
     {
         if (!File.Exists(fullPath))
@@ -157,6 +196,11 @@ public class StorageService : IStorageService
         }
     }
 
+    /// <summary>
+    /// По типу файла определяет папку и список разрешённых расширений.
+    /// Для неизвестного типа возвращает null
+    /// </summary>
+    /// <param name="type">Тип файла: "video" или "document"</param>
     private static (string folder, string[] extensions)? Categorize(string type) =>
         type?.ToLowerInvariant() switch
         {
