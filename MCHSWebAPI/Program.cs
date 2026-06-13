@@ -4,6 +4,7 @@ using MCHSWebAPI.Services.AuthService;
 using MCHSWebAPI.Services.LectureService;
 using MCHSWebAPI.Services.ReportService;
 using MCHSWebAPI.Services.RoleService;
+using MCHSWebAPI.Services.StorageService;
 using MCHSWebAPI.Services.TestService;
 using MCHSWebAPI.Services.UserService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -31,6 +32,12 @@ builder.Services.AddScoped<ITestingService, TestingService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IPdfParserService, PdfParserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddSingleton<IStorageService, StorageService>();
+// Разрешаем заливку крупных видео: снимаем ограничение на размер multipart-формы.
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = long.MaxValue;
+});
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MCHSWebAPI";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MCHSMobileApp";
